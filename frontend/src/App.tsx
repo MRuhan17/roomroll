@@ -5,36 +5,14 @@ import { SignupPage } from './pages/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LobbyPage } from './pages/LobbyPage';
 import { SessionRoomPage } from './pages/SessionRoomPage';
-import { GlobalBackground } from './components/common/GlobalBackground';
-import { Navigation } from './components/navigation/Navigation';
-import { useState } from 'react';
+import { MainLayout } from './components/layout/MainLayout';
 import './App.css';
-
-// Layout wrapper to inject Navigation and Background
-const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const [isDarkerVariant, setIsDarkerVariant] = useState(false);
-
-  return (
-    <div className="relative min-h-screen">
-      <GlobalBackground isDarker={isDarkerVariant} />
-
-      <Navigation
-        isDarkerVariant={isDarkerVariant}
-        onVariantToggle={() => setIsDarkerVariant(!isDarkerVariant)}
-      />
-
-      <div className="relative z-10">
-        {children}
-      </div>
-    </div>
-  );
-};
 
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppLayout>
+        <MainLayout>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
@@ -44,7 +22,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </AppLayout>
+        </MainLayout>
       </AuthProvider>
     </Router>
   );

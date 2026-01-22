@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -14,9 +14,9 @@ interface ContentPanelProps {
 
 export function ContentPanel({ children, className = '', variant = 'parchment' }: ContentPanelProps) {
     const variants = {
-        parchment: 'bg-gradient-to-br from-amber-50/95 to-stone-100/95 border-amber-900/20',
-        wood: 'bg-gradient-to-br from-amber-900/30 to-stone-900/40 border-amber-700/30 text-stone-100',
-        stone: 'bg-gradient-to-br from-stone-800/60 to-stone-900/70 border-stone-600/30 text-stone-100',
+        parchment: 'bg-gradient-to-br from-guild-panel-parchment/95 to-guild-panel-parchment-to/95 border-guild-border-parchment/20 text-stone-900',
+        wood: 'bg-gradient-to-br from-guild-panel-wood/30 to-guild-panel-wood-to/40 border-guild-border-wood/30 text-stone-100',
+        stone: 'bg-gradient-to-br from-guild-panel-stone/60 to-guild-panel-stone-to/70 border-guild-border-stone/30 text-stone-100',
     };
 
     return (
