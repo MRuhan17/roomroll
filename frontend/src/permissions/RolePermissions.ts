@@ -181,14 +181,23 @@ export function assertCanPerformAction(
  * Custom error class for permission denied errors.
  */
 export class PermissionDeniedError extends Error {
+    action: PrivilegedAction;
+    reason: string;
+    currentRole?: UserRole;
+    requiredRole?: UserRole;
+
     constructor(
-        public action: PrivilegedAction,
-        public reason: string,
-        public currentRole?: UserRole,
-        public requiredRole?: UserRole
+        action: PrivilegedAction,
+        reason: string,
+        currentRole?: UserRole,
+        requiredRole?: UserRole
     ) {
         super(`Permission denied for action '${action}': ${reason}`);
         this.name = 'PermissionDeniedError';
+        this.action = action;
+        this.reason = reason;
+        this.currentRole = currentRole;
+        this.requiredRole = requiredRole;
     }
 }
 
@@ -287,29 +296,43 @@ export const endSession = guardAction(
 /**
  * Kicks a player from the lobby. DM only.
  * Success Criteria: Non-DM users cannot trigger this action.
+ * 
+ * Behavioral Difference: Kick is temporary and lobby-specific.
+ * Player can rejoin this lobby later (if kick is cleared) and can join other lobbies by the same DM.
  */
 export const kickPlayer = guardAction(
     PrivilegedAction.KICK_PLAYER,
-    (userState: UserStateContext, playerId: string, reason?: string): void => {
+    (userState: UserStateContext, lobbyId: string, playerId: string, reason?: string): void => {
         // Role Check: Only DM can kick players
         // This check is enforced by guardAction wrapper
 
-        // TODO: Replace with actual backend call
+        // Import kick/ban system dynamically to avoid circular dependencies
+        import('../moderation/KickBanSystem').then(({ kickPlayerFromLobby }) => {
+            kickPlayerFromLobby(playerId, lobbyId, userState.userId!, reason);
+        });
+
         console.log(`[DM Action] Player kicked by DM ${userState.userId}: ${playerId}`, reason);
     }
 );
 
 /**
- * Bans a player from the lobby. DM only.
+ * Bans a player from all lobbies hosted by this DM. DM only.
  * Success Criteria: Non-DM users cannot trigger this action.
+ * 
+ * Behavioral Difference: Ban is permanent and DM-scoped.
+ * Player cannot join ANY lobby hosted by this DM (current or future).
  */
 export const banPlayer = guardAction(
     PrivilegedAction.BAN_PLAYER,
-    (userState: UserStateContext, playerId: string, reason?: string): void => {
+    (userState: UserStateContext, lobbyId: string, playerId: string, reason?: string): void => {
         // Role Check: Only DM can ban players
         // This check is enforced by guardAction wrapper
 
-        // TODO: Replace with actual backend call
+        // Import kick/ban system dynamically to avoid circular dependencies
+        import('../moderation/KickBanSystem').then(({ banPlayerByDM }) => {
+            banPlayerByDM(playerId, userState.userId!, lobbyId, reason);
+        });
+
         console.log(`[DM Action] Player banned by DM ${userState.userId}: ${playerId}`, reason);
     }
 );
