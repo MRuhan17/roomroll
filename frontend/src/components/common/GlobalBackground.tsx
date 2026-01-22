@@ -1,20 +1,17 @@
-import React from 'react';
-
 interface GlobalBackgroundProps {
     isDarker?: boolean;
 }
 
 export function GlobalBackground({ isDarker = false }: GlobalBackgroundProps) {
+    const baseGradient = isDarker
+        ? "from-guild-bg-dark-start via-guild-bg-dark-mid to-guild-bg-dark-end"
+        : "from-guild-bg-start via-guild-bg-mid to-guild-bg-end";
+
     return (
         <>
             {/* Base layer: Deep stone gradient with subtle lighting */}
             <div
-                className="fixed inset-0 z-0 pointer-events-none"
-                style={{
-                    background: isDarker
-                        ? 'linear-gradient(135deg, #1a1612 0%, #0d0a08 50%, #1a1410 100%)'
-                        : 'linear-gradient(135deg, #2a2420 0%, #1a1510 50%, #252118 100%)',
-                }}
+                className={`fixed inset-0 z-0 pointer-events-none transition-colors duration-700 ease-in-out bg-gradient-to-br ${baseGradient}`}
             />
 
             {/* Texture layer: Subtle stone/parchment grain */}
@@ -38,6 +35,7 @@ export function GlobalBackground({ isDarker = false }: GlobalBackgroundProps) {
             <div
                 className="fixed inset-0 z-0 opacity-[0.08] pointer-events-none"
                 style={{
+                    // Using the light-warmth color defined in tailwind.config.js (#ffc878)
                     background: 'radial-gradient(ellipse at 50% 20%, rgba(255, 200, 120, 0.3) 0%, transparent 60%)',
                 }}
             />

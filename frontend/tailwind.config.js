@@ -40,6 +40,31 @@ export default {
                     DEFAULT: "var(--card)",
                     foreground: "var(--card-foreground)",
                 },
+                // Semantic DnD Theme Colors
+                guild: {
+                    bg: {
+                        start: '#2a2420',
+                        mid: '#1a1510',
+                        end: '#252118',
+                        'dark-start': '#1a1612',
+                        'dark-mid': '#0d0a08',
+                        'dark-end': '#1a1410',
+                        'light-warmth': '#ffc878',
+                    },
+                    panel: {
+                        parchment: '#fffbeb',     // amber-50
+                        'parchment-to': '#f5f5f4', // stone-100
+                        wood: '#451a03',          // amber-900
+                        'wood-to': '#1c1917',     // stone-900
+                        stone: '#292524',         // stone-800
+                        'stone-to': '#1c1917',    // stone-900
+                    },
+                    border: {
+                        parchment: '#451a03',     // amber-900
+                        wood: '#b45309',          // amber-700
+                        stone: '#57534e',         // stone-600
+                    },
+                },
             },
             borderRadius: {
                 lg: "var(--radius)",
