@@ -65,12 +65,48 @@ The application should now be running locally, typically at `http://localhost:51
 
 ### Frontend Structure (`frontend/src`)
 - `components/`: Reusable UI components.
-- `pages/`: Page components corresponding to routes.
+  - `auth/`: Authentication screens (Login, Signup)
+  - `dashboard/`: Dashboard with lobby list
+  - `lobby/`: Lobby view with member management
+  - `session/`: Session room with game board and panels
+  - `navigation/`: Top navigation bar
+  - `common/`: Shared components (backgrounds, etc.)
+  - `ui/`: shadcn/ui component library
 - `context/`: React Context definitions for global state.
+  - `AuthContext.tsx`: Authentication state management
 - `assets/`: Static assets like images.
-- `utils/`: Utility functions and helpers.
 - `App.tsx`: Main application component and routing setup.
 - `main.tsx`: Entry point of the application.
+
+## 5.1. Current Application State
+
+The application currently has **wireframe implementations** for all core screens:
+
+### Auth Screens
+- **Login Form**: Email and password fields with validation
+- **Signup Form**: Account creation with email/password
+- Toggle between login and signup views
+
+### Dashboard
+- **Lobby List**: Displays available game lobbies (currently using mock data)
+- **Create Lobby Button**: Prominent button to start a new lobby
+- Each lobby card shows: name, host, and member count
+
+### Lobby View
+- **Party Members List**: Shows all players in the lobby with avatars
+- **Invite Link**: Copy-able invite URL for sharing
+- **Start Session Button**: DM-only control to begin the game session
+- Member count badge and role indicators (DM crown icon)
+
+### Session Room
+- **Resizable Layout**: Split-panel design with draggable divider
+- **Game Board Area**: Large canvas placeholder for map/board rendering
+- **Side Panel with Tabs**:
+  - **Chat**: Message history and input field
+  - **Players**: Party member list with avatars
+  - **Dice**: Dice roller interface (D4, D6, D8, D10, D12, D20)
+
+**Note**: All data is currently mocked for demonstration. Backend integration is pending.
 
 ## 6. Key Commands
 

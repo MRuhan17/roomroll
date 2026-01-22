@@ -1,30 +1,20 @@
-import { useState, useEffect } from 'react';
-import { AuthScreen } from './components/auth/AuthScreen';
-import { Dashboard } from './components/dashboard/Dashboard';
-import { Lobby } from './components/lobby/Lobby';
-import { SessionRoom } from './components/session/SessionRoom';
-import { GlobalBackground } from './components/common/GlobalBackground';
-import { Navigation } from './components/navigation/Navigation';
-import { useAuth } from './context/AuthContext';
+import { useState } from 'react';
+import { AuthScreen } from './components/AuthScreen';
+import { Dashboard } from './components/Dashboard';
+import { Lobby } from './components/Lobby';
+import { SessionRoom } from './components/SessionRoom';
+import { GlobalBackground } from './components/GlobalBackground';
+import { Navigation } from './components/Navigation';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<'auth' | 'dashboard' | 'lobby' | 'session'>('auth');
   const [isDarkerVariant, setIsDarkerVariant] = useState(false);
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated && currentPage === 'auth') {
-      setCurrentPage('dashboard');
-    } else if (!isAuthenticated && currentPage !== 'auth') {
-      setCurrentPage('auth');
-    }
-  }, [isAuthenticated, currentPage]);
 
   return (
     <div className="relative min-h-screen">
       <GlobalBackground isDarker={isDarkerVariant} />
-
-      <Navigation
+      
+      <Navigation 
         currentPage={currentPage}
         onPageChange={setCurrentPage}
         isDarkerVariant={isDarkerVariant}

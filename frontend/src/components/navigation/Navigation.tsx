@@ -1,22 +1,28 @@
 import { Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 interface NavigationProps {
+    currentPage: 'auth' | 'dashboard' | 'lobby' | 'session';
+    onPageChange: (page: 'auth' | 'dashboard' | 'lobby' | 'session') => void;
     isDarkerVariant: boolean;
     onVariantToggle: () => void;
 }
 
-export function Navigation({ isDarkerVariant, onVariantToggle }: NavigationProps) {
+export function Navigation({ currentPage, onPageChange, isDarkerVariant, onVariantToggle }: NavigationProps) {
     const { isAuthenticated, logout } = useAuth();
-    const navigate = useNavigate();
-    const location = useLocation();
 
-    const navItems = [
-        { path: '/', label: 'Dashboard', requiredAuth: true },
-        { path: '/lobby', label: 'Lobby', requiredAuth: true },
-        { path: '/session', label: 'Session Room', requiredAuth: true },
-        { path: '/login', label: 'Login', requiredAuth: false, hideIfAuth: true },
+    type NavItem = {
+        id: 'auth' | 'dashboard' | 'lobby' | 'session';
+        label: string;
+        requiredAuth: boolean;
+        hideIfAuth?: boolean;
+    };
+
+    const navItems: NavItem[] = [
+        { id: 'dashboard', label: 'Dashboard', requiredAuth: true },
+        { id: 'lobby', label: 'Lobby', requiredAuth: true },
+        { id: 'session', label: 'Session Room', requiredAuth: true },
+        { id: 'auth', label: 'Login', requiredAuth: false, hideIfAuth: true },
     ];
 
     return (
@@ -27,15 +33,15 @@ export function Navigation({ isDarkerVariant, onVariantToggle }: NavigationProps
                         if (item.requiredAuth && !isAuthenticated) return null;
                         if (item.hideIfAuth && isAuthenticated) return null;
 
-                        const isActive = location.pathname === item.path;
+                        const isActive = currentPage === item.id;
 
                         return (
                             <button
-                                key={item.path}
-                                onClick={() => navigate(item.path)}
+                                key={item.id}
+                                onClick={() => onPageChange(item.id)}
                                 className={`px-4 py-2 rounded transition-all ${isActive
-                                        ? 'bg-amber-900/40 text-amber-100 border border-amber-700/50'
-                                        : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/30'
+                                    ? 'bg-amber-900/40 text-amber-100 border border-amber-700/50'
+                                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800/30'
                                     }`}
                             >
                                 {item.label}

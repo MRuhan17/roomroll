@@ -1,6 +1,6 @@
 import { ContentPanel } from '../common/ContentPanel';
 import { Scroll } from 'lucide-react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface AuthLayoutProps {
     children: ReactNode;

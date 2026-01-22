@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import type { ReactNode } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 interface AuthGuardProps {
@@ -9,21 +9,18 @@ interface AuthGuardProps {
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireAuth = true }) => {
     const { isAuthenticated, isLoading } = useAuth();
-    const location = useLocation();
 
     if (isLoading) {
         return <div>Loading access permissions...</div>;
     }
 
-    // If page requires auth and user is not authenticated -> Redirect to Login
+    // Logic for redirection should be handled by the parent/router state
     if (requireAuth && !isAuthenticated) {
-        // Save the location they were trying to go to
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        return <div className="p-8 text-center text-red-400">Authentication Required</div>;
     }
 
-    // If page is for guests only (like Login/Signup) and user IS authenticated -> Redirect to Dashboard
     if (!requireAuth && isAuthenticated) {
-        return <Navigate to="/" replace />;
+        // return <div className="p-8 text-center">Already Authenticated</div>;
     }
 
     return <>{children}</>;
