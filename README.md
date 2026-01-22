@@ -16,10 +16,6 @@ Repository Structure
 
 This repository uses a monorepo layout with clear separation between frontend and backend code.
 
-roomroll/
-├── frontend/    Client-side application
-├── backend/     Server-side application and real-time services
-└── README.md
 
 Core Principles
 
