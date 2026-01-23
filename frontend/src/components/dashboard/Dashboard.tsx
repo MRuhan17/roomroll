@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { useGameState } from '../../context/GameStateContext';
+import { UserRole } from '../../models/GameState';
 
 // Mock data for lobbies
 const MOCK_LOBBIES = [
@@ -11,11 +13,26 @@ const MOCK_LOBBIES = [
 ];
 
 export const Dashboard: React.FC = () => {
+    const { joinLobby } = useGameState();
+
+    const handleCreateLobby = () => {
+        // Simulating creating a new lobby and joining as DM
+        joinLobby('lobby-' + Date.now(), UserRole.DM);
+    };
+
+    const handleJoinLobby = (lobbyId: string) => {
+        // Simulating joining an existing lobby as Player
+        joinLobby(lobbyId, UserRole.PLAYER);
+    };
+
     return (
         <div className="pt-24 px-6 max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-4xl font-serif text-amber-50">Lobbies</h1>
-                <Button className="bg-amber-700 hover:bg-amber-600 text-white gap-2">
+                <Button
+                    className="bg-amber-700 hover:bg-amber-600 text-white gap-2"
+                    onClick={handleCreateLobby}
+                >
                     <Plus className="size-4" />
                     Create Lobby
                 </Button>
@@ -33,7 +50,11 @@ export const Dashboard: React.FC = () => {
                                 <span className="text-stone-500">
                                     Adventurers: <span className="text-stone-300">{lobby.members}/{lobby.maxMembers}</span>
                                 </span>
-                                <Button variant="ghost" className="text-amber-500 hover:text-amber-400 hover:bg-amber-950/20 h-auto py-1 px-3 text-xs">
+                                <Button
+                                    variant="ghost"
+                                    className="text-amber-500 hover:text-amber-400 hover:bg-amber-950/20 h-auto py-1 px-3 text-xs"
+                                    onClick={() => handleJoinLobby(lobby.id)}
+                                >
                                     Join
                                 </Button>
                             </div>

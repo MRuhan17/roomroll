@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Copy, Shield, Crown, Play } from 'lucide-react';
+import { useGameState } from '../../context/GameStateContext';
+import { UserRole } from '../../models/GameState';
+import { startSession } from '../../permissions/RolePermissions';
 import { Separator } from '../ui/separator';
 
 const MOCK_MEMBERS = [
@@ -14,8 +17,32 @@ const MOCK_MEMBERS = [
 ];
 
 export const Lobby: React.FC = () => {
-    // Mocking DM stats, in real app this comes from auth/room context
-    const isDM = true;
+    const { userState, enterSession } = useGameState();
+    const [isStarting, setIsStarting] = useState(false);
+
+    // Determine if current user is DM based on real state
+    const isDM = userState.state === 'IN_LOBBY' && userState.role === UserRole.DM;
+
+    const handleStartSession = () => {
+        if (!isDM) return;
+
+        try {
+            setIsStarting(true);
+            // Permission Check: startSession will throw if user is not DM
+            // This enforces "DM Only" rule at the logic level
+            const result = startSession(userState, userState.lobbyId); // userState.lobbyId is guaranteed in IN_LOBBY state
+
+            // Success: Transition to session
+            console.log('Session started:', result.sessionId);
+            enterSession(result.sessionId);
+        } catch (error) {
+            console.error('Failed to start session:', error);
+            // In a real app, show error toast here
+        } finally {
+            setIsStarting(false);
+        }
+    };
+
     const inviteLink = "https://roomroll.com/lobby/xyz-789";
 
     const copyInvite = () => {
@@ -31,9 +58,13 @@ export const Lobby: React.FC = () => {
                     <p className="text-stone-400 mt-1">Waiting for party to gather...</p>
                 </div>
                 {isDM && (
-                    <Button className="bg-amber-700 hover:bg-amber-600 text-white gap-2 w-full md:w-auto">
+                    <Button
+                        className="bg-amber-700 hover:bg-amber-600 text-white gap-2 w-full md:w-auto"
+                        onClick={handleStartSession}
+                        disabled={isStarting}
+                    >
                         <Play className="size-4" />
-                        Start Session
+                        {isStarting ? 'Starting...' : 'Start Session'}
                     </Button>
                 )}
             </div>
