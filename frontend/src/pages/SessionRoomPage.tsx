@@ -1,21 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthGuard } from '../components/auth/AuthGuard';
+import { useAuth } from '../context/AuthContext';
 import { ContentPanel } from '../components/common/ContentPanel';
 import { Dices, Map, Users, MessageSquare } from 'lucide-react';
+import { DiceSystem } from '../systems/DiceSystem';
 
 export const SessionRoomPage: React.FC = () => {
+    const { user } = useAuth();
+    const [diceNotation, setDiceNotation] = useState('1d20');
+    const [logs, setLogs] = useState<string[]>([
+        'Aria rolled Investigation: 18',
+        'Grimwald cast Healing Word on Zephyr',
+        'The ancient door creaks open...',
+        'Zephyr rolled Stealth: 22',
+    ]);
+
+    const handleRoll = () => {
+        if (!user) return;
+
+        try {
+            const result = DiceSystem.processRoll({
+                userId: user.id,
+                userName: user.name,
+                notation: diceNotation
+            });
+
+            const logEntry = `${result.userName} rolled ${result.total} (${result.notation}) [${result.rolls.join(', ')}]`;
+            setLogs(prev => [logEntry, ...prev]);
+
+            // In a real app, we would broadcast 'result' here via WebSocket
+        } catch (error: any) {
+            console.error('Roll failed:', error);
+            // Optionally set error state or show toast
+        }
+    };
+
     const partyMembers = [
         { name: 'Aria Moonwhisper', class: 'Ranger', hp: '42/45' },
         { name: 'Grimwald Stonefist', class: 'Cleric', hp: '38/50' },
         { name: 'Zephyr Swiftblade', class: 'Rogue', hp: '28/32' },
         { name: 'Eldrin the Wise', class: 'Wizard', hp: '24/24' },
-    ];
-
-    const recentActions = [
-        'Aria rolled Investigation: 18',
-        'Grimwald cast Healing Word on Zephyr',
-        'The ancient door creaks open...',
-        'Zephyr rolled Stealth: 22',
     ];
 
     return (
@@ -47,12 +71,29 @@ export const SessionRoomPage: React.FC = () => {
 
                         {/* Narrative/Dice area */}
                         <ContentPanel variant="parchment" className="p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Dices className="w-5 h-5 text-amber-900" />
-                                <h2 className="text-lg text-stone-800">Recent Actions</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Dices className="w-5 h-5 text-amber-900" />
+                                    <h2 className="text-lg text-stone-800">Recent Actions</h2>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={diceNotation}
+                                        onChange={(e) => setDiceNotation(e.target.value)}
+                                        className="px-2 py-1 text-sm border border-stone-400 rounded bg-white/50 text-stone-800 w-24 focus:outline-none focus:border-amber-600"
+                                        placeholder="1d20"
+                                    />
+                                    <button
+                                        onClick={handleRoll}
+                                        className="px-3 py-1 bg-amber-800 text-amber-50 rounded text-sm hover:bg-amber-900 transition-colors"
+                                    >
+                                        Roll
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {recentActions.map((action, idx) => (
+                                {logs.map((action, idx) => (
                                     <div key={idx} className="py-2 px-3 bg-amber-50 rounded border border-amber-900/10 text-sm text-stone-700">
                                         {action}
                                     </div>
