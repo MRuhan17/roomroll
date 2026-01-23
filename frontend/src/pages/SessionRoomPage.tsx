@@ -1,37 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthGuard } from '../components/auth/AuthGuard';
 import { useAuth } from '../context/AuthContext';
 import { ContentPanel } from '../components/common/ContentPanel';
 import { Dices, Map, Users, MessageSquare } from 'lucide-react';
 import { DiceSystem } from '../systems/DiceSystem';
+import { eventSystem } from '../systems/GameEventSystem';
+import { GameEventType, type DiceRolledEvent } from '../models/GameEvents';
 
 export const SessionRoomPage: React.FC = () => {
     const { user } = useAuth();
     const [diceNotation, setDiceNotation] = useState('1d20');
-    const [logs, setLogs] = useState<string[]>([
-        'Aria rolled Investigation: 18',
-        'Grimwald cast Healing Word on Zephyr',
-        'The ancient door creaks open...',
-        'Zephyr rolled Stealth: 22',
-    ]);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    // Subscribe to Shared Game Events
+    useEffect(() => {
+        // Function to format event to log string
+        const formatEvent = (event: DiceRolledEvent) => {
+            const { userName, total, notation, rolls } = event.payload;
+            return `${userName} rolled ${total} (${notation}) [${rolls.join(', ')}]`;
+        };
+
+        // 1. Load History
+        const history = eventSystem.getEventsByType(GameEventType.DICE_ROLLED) as DiceRolledEvent[];
+        const historyLogs = history.map(formatEvent).reverse(); // Newest first
+
+        // Initialize Logs
+        setLogs([
+            ...historyLogs,
+            'Session started...', // Marker
+        ]);
+
+        // 2. Subscribe to new events
+        const unsubscribe = eventSystem.subscribe((event) => {
+            if (event.type === GameEventType.DICE_ROLLED) {
+                const logEntry = formatEvent(event as DiceRolledEvent);
+                setLogs(prev => [logEntry, ...prev]);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleRoll = () => {
         if (!user) return;
 
         try {
+            // 1. Calculate Result (Server-Authoritative Simulation)
             const result = DiceSystem.processRoll({
                 userId: user.id,
                 userName: user.name,
                 notation: diceNotation
             });
 
-            const logEntry = `${result.userName} rolled ${result.total} (${result.notation}) [${result.rolls.join(', ')}]`;
-            setLogs(prev => [logEntry, ...prev]);
+            // 2. Publish Event (Shared Reality)
+            eventSystem.publish({
+                type: GameEventType.DICE_ROLLED,
+                actorId: user.id,
+                payload: result
+            });
 
-            // In a real app, we would broadcast 'result' here via WebSocket
         } catch (error: any) {
             console.error('Roll failed:', error);
-            // Optionally set error state or show toast
         }
     };
 
@@ -66,8 +95,8 @@ export const SessionRoomPage: React.FC = () => {
                                         key={die}
                                         onClick={() => setDiceNotation('1' + die)}
                                         className={`py-2 px-1 rounded border border-stone-400 font-mono text-sm font-bold transition-all ${diceNotation === '1' + die
-                                                ? 'bg-amber-800 text-amber-50 border-amber-900'
-                                                : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                                            ? 'bg-amber-800 text-amber-50 border-amber-900'
+                                            : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
                                             }`}
                                     >
                                         {die.toUpperCase()}
