@@ -85,8 +85,9 @@ export function AuthScreen() {
 
           <form onSubmit={handleLogin} className="mt-7 space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm text-stone-700">Adventurer Name</label>
+              <label htmlFor="username" className="mb-1.5 block text-sm text-stone-700">Adventurer Name</label>
               <input
+                id="username"
                 type="text"
                 placeholder="Enter your hero name"
                 value={username}
@@ -96,8 +97,9 @@ export function AuthScreen() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm text-stone-700">Passphrase</label>
+              <label htmlFor="password" className="mb-1.5 block text-sm text-stone-700">Passphrase</label>
               <input
+                id="password"
                 type="password"
                 placeholder="Enter your passphrase"
                 value={password}
