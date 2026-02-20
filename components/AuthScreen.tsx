@@ -8,7 +8,7 @@ import {
   Shield,
   Sparkles,
   Sword,
-  WandSparkles,
+  Wand2,
 } from 'lucide-react';
 
 const dragonWing = [
@@ -18,7 +18,7 @@ const dragonWing = [
 ];
 
 const partyWing = [
-  { name: 'Nyra', className: 'Spellweaver', gear: 'Crystal wand', icon: WandSparkles },
+  { name: 'Nyra', className: 'Spellweaver', gear: 'Crystal wand', icon: Wand2 },
   { name: 'Thorn', className: 'Hexbinder', gear: 'Runed wand', icon: Sparkles },
   { name: 'Brakka', className: 'Vanguard', gear: 'Greatsword', icon: Sword },
   { name: 'Ivar', className: 'Guardian', gear: 'Tower shield', icon: Shield },
