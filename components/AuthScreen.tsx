@@ -8,7 +8,7 @@ import {
   Shield,
   Sparkles,
   Sword,
-  Wand2,
+  WandSparkles,
 } from 'lucide-react';
 
 const dragonWing = [
@@ -18,7 +18,7 @@ const dragonWing = [
 ];
 
 const partyWing = [
-  { name: 'Nyra', className: 'Spellweaver', gear: 'Crystal wand', icon: Wand2 },
+  { name: 'Nyra', className: 'Spellweaver', gear: 'Crystal wand', icon: WandSparkles },
   { name: 'Thorn', className: 'Hexbinder', gear: 'Runed wand', icon: Sparkles },
   { name: 'Brakka', className: 'Vanguard', gear: 'Greatsword', icon: Sword },
   { name: 'Ivar', className: 'Guardian', gear: 'Tower shield', icon: Shield },
@@ -85,9 +85,8 @@ export function AuthScreen() {
 
           <form onSubmit={handleLogin} className="mt-7 space-y-4">
             <div>
-              <label htmlFor="username" className="mb-1.5 block text-sm text-stone-700">Adventurer Name</label>
+              <label className="mb-1.5 block text-sm text-stone-700">Adventurer Name</label>
               <input
-                id="username"
                 type="text"
                 placeholder="Enter your hero name"
                 value={username}
@@ -97,9 +96,8 @@ export function AuthScreen() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm text-stone-700">Passphrase</label>
+              <label className="mb-1.5 block text-sm text-stone-700">Passphrase</label>
               <input
-                id="password"
                 type="password"
                 placeholder="Enter your passphrase"
                 value={password}
