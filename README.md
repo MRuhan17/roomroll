@@ -6,7 +6,7 @@ The goal of Roomroll is to reduce friction in online tabletop play by keeping se
 
 This repository contains the early-stage codebase for Roomroll and is under active development.
 
-Project Status
+Project Status-
 
 Roomroll is currently in early development. The focus is on building a stable core that allows small groups to run a full session end to end without desynchronization or data loss.
 
