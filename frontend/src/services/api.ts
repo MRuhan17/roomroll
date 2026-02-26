@@ -1,0 +1,32 @@
+import axios, { AxiosError } from "axios";
+
+const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000";
+const TOKEN_KEY = "roomroll_token";
+
+export const api = axios.create({
+  baseURL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export function getApiErrorMessage(error: unknown, fallback = "Something went wrong") {
+  if (error instanceof AxiosError) {
+    const payload = error.response?.data as { message?: string } | undefined;
+    const message = payload?.message;
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
+export { TOKEN_KEY };
