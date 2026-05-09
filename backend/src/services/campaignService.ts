@@ -9,9 +9,11 @@ export interface CreateCampaignInput {
     dmUserId: number;
 }
 
+const MAX_INVITE_CODE_GENERATION_ATTEMPTS = 5;
+
 export const createCampaign = async (input: CreateCampaignInput): Promise<Campaign> => {
     let lastError: Error | null = null;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (let attempt = 0; attempt < MAX_INVITE_CODE_GENERATION_ATTEMPTS; attempt += 1) {
         const inviteCode = generateInviteCode();
         const { data, error } = await supabase
             .from('campaigns')

@@ -11,7 +11,7 @@ export const verifyToken = (token: string): AuthUser => {
         throw new Error('Invalid token');
     }
     const id = Number(decoded.id);
-    if (!id) {
+    if (Number.isNaN(id) || id <= 0) {
         throw new Error('Invalid token payload');
     }
     return {

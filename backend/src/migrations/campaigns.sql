@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     name VARCHAR(120) NOT NULL,
     description TEXT,
     world_type VARCHAR(60),
-    dm_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    dm_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     invite_code VARCHAR(12) UNIQUE NOT NULL,
     active_map_id INTEGER,
     current_session_state JSONB DEFAULT '{}'::jsonb,

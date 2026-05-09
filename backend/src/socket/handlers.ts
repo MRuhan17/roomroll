@@ -3,7 +3,7 @@ import { verifyToken } from '../services/authService';
 import { presenceStore } from '../campaign-engine/presenceStore';
 import { getCampaignSnapshot } from '../services/campaignStateService';
 import { getMember } from '../services/campaignService';
-import { rollDice, storeDiceRoll } from '../services/diceService';
+import { isDiceType, rollDice, storeDiceRoll } from '../services/diceService';
 import { moveToken } from '../services/tokenService';
 import { updateRevealState } from '../services/mapService';
 import { createCampaignEvent } from '../services/eventService';
@@ -65,7 +65,7 @@ export const registerSocketHandlers = (io: Server) => {
     io.on('connection', (socket) => {
         const user = socket.data.user as AuthUser;
 
-        socket.on('JOIN_CAMPAIGN', async (payload: { campaignId?: number }) => {
+        socket.on(SocketEvents.JoinCampaign, async (payload: { campaignId?: number }) => {
             const campaignId = Number(payload?.campaignId);
             if (!campaignId) {
                 socket.emit('ERROR', { message: 'campaignId required' });
@@ -95,7 +95,7 @@ export const registerSocketHandlers = (io: Server) => {
             });
         });
 
-        socket.on('LEAVE_CAMPAIGN', () => {
+        socket.on(SocketEvents.LeaveCampaign, () => {
             leaveCampaignRoom(socket, io);
         });
 
@@ -112,7 +112,7 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.on(SocketEvents.DiceRolled, async (payload: DiceRollRequest & { context?: string }) => {
             const campaignId = socket.data.campaignId as number | undefined;
-            if (!campaignId) {
+            if (!campaignId || !payload?.diceType || !isDiceType(payload.diceType)) {
                 return;
             }
             const roll = rollDice(payload);
@@ -165,7 +165,7 @@ export const registerSocketHandlers = (io: Server) => {
             });
         });
 
-        socket.on('REQUEST_AI_NARRATION', async (payload: { playerAction?: string; tone?: string }) => {
+        socket.on(SocketEvents.RequestAiNarration, async (payload: { playerAction?: string; tone?: string }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId || !payload?.playerAction) {
                 return;

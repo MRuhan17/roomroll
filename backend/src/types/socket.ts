@@ -1,4 +1,7 @@
 export const SocketEvents = {
+    JoinCampaign: 'JOIN_CAMPAIGN',
+    LeaveCampaign: 'LEAVE_CAMPAIGN',
+    RequestAiNarration: 'REQUEST_AI_NARRATION',
     PlayerJoined: 'PLAYER_JOINED',
     PlayerLeft: 'PLAYER_LEFT',
     PlayerTyping: 'PLAYER_TYPING',

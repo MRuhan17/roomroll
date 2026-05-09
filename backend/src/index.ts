@@ -8,6 +8,7 @@ import mapRoutes from './routes/mapRoutes';
 import tokenRoutes from './routes/tokenRoutes';
 import aiRoutes from './routes/aiRoutes';
 import { initializeSocket } from './socket';
+import { corsOptions } from './config/cors';
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes

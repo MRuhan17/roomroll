@@ -12,6 +12,10 @@ const diceSides: Record<DiceType, number> = {
     d100: 100
 };
 
+export const isDiceType = (value: string): value is DiceType => {
+    return Object.keys(diceSides).includes(value);
+};
+
 export const rollDice = (request: DiceRollRequest): DiceRollResult => {
     const sides = diceSides[request.diceType];
     const modifier = request.modifier ?? 0;
