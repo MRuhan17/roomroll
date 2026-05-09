@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { Sparkles } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -37,21 +35,22 @@ export function RegisterPage() {
   });
 
   return (
-    <AuthShell
-      title="Create account"
-      subtitle="Set up your identity and launch your first room."
-    >
-      <Card className="w-full">
-        <CardHeader>
-          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-amber-300/35 bg-amber-300/12 text-amber-200">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <CardTitle>Register</CardTitle>
-          <CardDescription>Start building your party and campaigns.</CardDescription>
+    <AuthShell>
+      <Card className="w-full max-w-md border-primary/20 bg-card/95 glass-panel text-center">
+        <CardHeader className="space-y-4 pb-8">
+          <CardTitle className="font-serif text-4xl text-primary font-normal tracking-wide">
+            RoomRoll
+          </CardTitle>
+          <p className="text-lg text-foreground font-serif tracking-wide">
+            Forge Your Destiny
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Set up your identity and launch your first room.
+          </p>
         </CardHeader>
         <CardContent>
           <form
-            className="space-y-4"
+            className="space-y-6 text-left"
             onSubmit={(event) => {
               event.preventDefault();
               setError(null);
@@ -59,45 +58,59 @@ export function RegisterPage() {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="name">Display name</Label>
+              <Label htmlFor="name" className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                Known Title (Display Name)
+              </Label>
               <Input
                 id="name"
                 placeholder="DungeonMaster42"
+                className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                True Name (Email)
+              </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@party.com"
+                className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                Secret Sigil (Password)
+              </Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="Create a strong password"
+                className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
               />
             </div>
-            {error ? <p className="text-sm text-amber-300">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? "Creating..." : "Create account"}
+            {error ? <p className="text-sm text-accent">{error}</p> : null}
+            <Button 
+              type="submit" 
+              className="w-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground font-serif tracking-widest transition-all rounded-sm uppercase mt-4" 
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Forging..." : "Create account"}
             </Button>
           </form>
-          <p className="mt-5 text-center text-sm text-muted-foreground">
+
+          <p className="mt-8 text-center text-xs text-muted-foreground tracking-wide">
             Already have an account?{" "}
-            <Link to="/login" className="font-medium text-cyan-300 hover:text-cyan-200">
+            <Link to="/login" className="font-medium text-primary hover:text-primary/80 transition-colors">
               Sign in
             </Link>
           </p>

@@ -13,6 +13,10 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+        serif: ["Playfair Display", "serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -46,11 +50,7 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 45px rgba(6, 182, 212, 0.16)",
-      },
-      backgroundImage: {
-        "roomroll-grid":
-          "linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
+        glow: "0 0 0 1px rgba(212, 175, 55, 0.15), 0 20px 45px rgba(212, 175, 55, 0.08)",
       },
     },
   },

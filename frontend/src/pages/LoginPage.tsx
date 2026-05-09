@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -38,18 +36,22 @@ export function LoginPage() {
   });
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to continue your campaign.">
-      <Card className="w-full">
-        <CardHeader>
-          <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Securely access your room dashboard.</CardDescription>
+    <AuthShell>
+      <Card className="w-full max-w-md border-primary/20 bg-card/95 glass-panel text-center">
+        <CardHeader className="space-y-4 pb-8">
+          <CardTitle className="font-serif text-4xl text-primary font-normal tracking-wide">
+            RoomRoll
+          </CardTitle>
+          <p className="text-lg text-foreground font-serif tracking-wide">
+            Summon Your Identity
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Enter the codes to resume your campaign.
+          </p>
         </CardHeader>
         <CardContent>
           <form
-            className="space-y-4"
+            className="space-y-6 text-left"
             onSubmit={(event) => {
               event.preventDefault();
               setError(null);
@@ -57,11 +59,13 @@ export function LoginPage() {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                True Name (Email)
+              </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@party.com"
+                className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -69,32 +73,54 @@ export function LoginPage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+                  Secret Sigil (Password)
+                </Label>
                 <button
                   type="button"
-                  className="text-xs text-cyan-200 transition hover:text-cyan-100"
+                  className="text-[10px] font-bold tracking-widest text-primary/80 transition hover:text-primary uppercase"
                 >
-                  Forgot?
+                  Forgot Spell?
                 </button>
               </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter password"
+                className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
               />
             </div>
-            {error ? <p className="text-sm text-amber-300">{error}</p> : null}
-            <Button type="submit" className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? "Signing in..." : "Enter Roomroll"}
+            {error ? <p className="text-sm text-accent">{error}</p> : null}
+            <Button 
+              type="submit" 
+              className="w-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground font-serif tracking-widest transition-all rounded-sm uppercase mt-4" 
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Summoning..." : "Awaken"}
             </Button>
           </form>
-          <p className="mt-5 text-center text-sm text-muted-foreground">
-            New here?{" "}
-            <Link to="/register" className="font-medium text-amber-300 hover:text-amber-200">
-              Create an account
+
+          <div className="mt-8 relative flex items-center py-5">
+            <div className="flex-grow border-t border-border/40"></div>
+            <span className="flex-shrink-0 mx-4 text-[10px] text-muted-foreground uppercase tracking-widest">Or Forge Pact With</span>
+            <div className="flex-grow border-t border-border/40"></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button variant="outline" className="bg-background border-border/40 hover:bg-white/5 rounded-sm text-xs tracking-wider text-muted-foreground hover:text-foreground">
+              Google Archive
+            </Button>
+            <Button variant="outline" className="bg-background border-border/40 hover:bg-white/5 rounded-sm text-xs tracking-wider text-muted-foreground hover:text-foreground">
+              Discord Guild
+            </Button>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground tracking-wide">
+            No lineage recorded?{" "}
+            <Link to="/register" className="font-medium text-primary hover:text-primary/80 transition-colors">
+              Begin Your Journey
             </Link>
           </p>
         </CardContent>
