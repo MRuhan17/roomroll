@@ -122,8 +122,8 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
         return [];
     }
     return data
-        .map((row) => row.campaigns)
-        .filter(Boolean) as Campaign[];
+        .map((row) => (row as unknown as { campaigns?: Campaign }).campaigns)
+        .filter((campaign): campaign is Campaign => Boolean(campaign));
 };
 
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
@@ -134,8 +134,9 @@ export const getUserActiveCampaign = async (userId: number): Promise<Campaign | 
         .order('joined_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-    if (!data || !data.campaigns) {
+    const campaign = (data as { campaigns?: Campaign } | null)?.campaigns;
+    if (!campaign) {
         return null;
     }
-    return data.campaigns as Campaign;
+    return campaign;
 };
