@@ -1,0 +1,17 @@
+export const SocketEvents = {
+    PlayerJoined: 'PLAYER_JOINED',
+    PlayerLeft: 'PLAYER_LEFT',
+    PlayerTyping: 'PLAYER_TYPING',
+    DiceRolled: 'DICE_ROLLED',
+    TokenMoved: 'TOKEN_MOVED',
+    MapRevealed: 'MAP_REVEALED',
+    NewNarration: 'NEW_NARRATION',
+    WorldEvent: 'WORLD_EVENT',
+    QuestUpdated: 'QUEST_UPDATED',
+    SessionStarted: 'SESSION_STARTED',
+    SessionEnded: 'SESSION_ENDED',
+    CampaignState: 'CAMPAIGN_STATE',
+    MapPing: 'MAP_PING'
+} as const;
+
+export type SocketEventName = typeof SocketEvents[keyof typeof SocketEvents];

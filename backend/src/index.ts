@@ -1,21 +1,18 @@
 import express, { Express, Request, Response } from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
+import campaignRoutes from './routes/campaignRoutes';
+import mapRoutes from './routes/mapRoutes';
+import tokenRoutes from './routes/tokenRoutes';
+import aiRoutes from './routes/aiRoutes';
+import { initializeSocket } from './socket';
 
 dotenv.config();
 
 const app: Express = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: "*", // Adjust for production
-        methods: ["GET", "POST"]
-    }
-});
-
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -24,20 +21,17 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/campaigns/:campaignId/maps', mapRoutes);
+app.use('/api/campaigns/:campaignId/tokens', tokenRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', message: 'Roomroll Backend is running' });
 });
 
-// Socket.IO Logic (S-001)
-io.on('connection', (socket) => {
-    console.log('[socket]: User connected', socket.id);
-
-    socket.on('disconnect', () => {
-        console.log('[socket]: User disconnected', socket.id);
-    });
-});
+const io = initializeSocket(httpServer);
 
 httpServer.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
