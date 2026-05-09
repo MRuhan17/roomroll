@@ -17,6 +17,7 @@ const callOpenAi = async (prompt: string): Promise<string | null> => {
 
     const runtimeFetch = globalThis.fetch;
     if (!runtimeFetch) {
+        console.warn('[ai]: fetch is unavailable; falling back to template narration');
         return null;
     }
 

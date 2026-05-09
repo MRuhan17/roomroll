@@ -40,7 +40,7 @@ export const endSession = async (
     }
 
     if (summary) {
-        await supabase
+        const { error: summaryError } = await supabase
             .from('session_logs')
             .insert([
                 {
@@ -49,6 +49,9 @@ export const endSession = async (
                     narration_log: []
                 }
             ]);
+        if (summaryError) {
+            throw summaryError;
+        }
     }
 
     await createCampaignEvent(campaignId, 'SESSION_ENDED', { state }, endedBy);

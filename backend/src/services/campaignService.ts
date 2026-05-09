@@ -123,9 +123,22 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
     if (!data) {
         return [];
     }
-    return data
-        .map((row) => (row as unknown as { campaigns?: Campaign }).campaigns)
-        .filter((campaign): campaign is Campaign => Boolean(campaign));
+    const campaigns: Campaign[] = [];
+    for (const row of data) {
+        if (row && typeof row === 'object' && 'campaigns' in row) {
+            const campaignsValue = (row as { campaigns?: unknown }).campaigns;
+            if (Array.isArray(campaignsValue)) {
+                for (const campaign of campaignsValue) {
+                    if (isCampaign(campaign)) {
+                        campaigns.push(campaign);
+                    }
+                }
+            } else if (isCampaign(campaignsValue)) {
+                campaigns.push(campaignsValue);
+            }
+        }
+    }
+    return campaigns;
 };
 
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
@@ -136,9 +149,26 @@ export const getUserActiveCampaign = async (userId: number): Promise<Campaign | 
         .order('joined_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-    const campaign = (data as { campaigns?: Campaign } | null)?.campaigns;
+    const campaignsValue = data && typeof data === 'object' && 'campaigns' in data
+        ? (data as { campaigns?: unknown }).campaigns
+        : undefined;
+    const campaign = Array.isArray(campaignsValue)
+        ? campaignsValue.find((item) => isCampaign(item))
+        : isCampaign(campaignsValue)
+            ? campaignsValue
+            : undefined;
     if (!campaign) {
         return null;
     }
     return campaign;
+};
+
+const isCampaign = (value: unknown): value is Campaign => {
+    return Boolean(
+        value &&
+            typeof value === 'object' &&
+            'id' in value &&
+            'name' in value &&
+            'invite_code' in value
+    );
 };

@@ -246,7 +246,7 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.on(SocketEvents.MapPing, (payload: { x?: number; y?: number }) => {
             const campaignId = socket.data.campaignId as number | undefined;
-            if (!campaignId || payload?.x === undefined || payload?.y === undefined) {
+            if (!campaignId || payload?.x == null || payload?.y == null) {
                 return;
             }
             socket.to(campaignRoom(campaignId)).emit(SocketEvents.MapPing, {

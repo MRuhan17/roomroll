@@ -1,3 +1,5 @@
+import { randomInt } from 'crypto';
+
 export const rollDie = (sides: number): number => {
-    return Math.floor(Math.random() * sides) + 1;
+    return randomInt(1, sides + 1);
 };

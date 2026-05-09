@@ -32,11 +32,10 @@ app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'ok', message: 'Roomroll Backend is running' });
 });
 
-const io = initializeSocket(httpServer);
+initializeSocket(httpServer);
 
 httpServer.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
 });
 
-export { io };
 export default app;

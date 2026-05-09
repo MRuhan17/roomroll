@@ -9,6 +9,9 @@ export const getCorsOrigins = (): string[] => {
             return parsed;
         }
     }
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('CORS_ORIGIN must be set in production');
+    }
     return ['http://localhost:5173'];
 };
 

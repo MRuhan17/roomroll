@@ -14,8 +14,12 @@ export const verifyToken = (token: string): AuthUser => {
     if (Number.isNaN(id) || id <= 0) {
         throw new Error('Invalid token payload');
     }
+    const email = decoded.email;
+    if (!email || typeof email !== 'string') {
+        throw new Error('Invalid token payload');
+    }
     return {
         id,
-        email: String(decoded.email || '')
+        email
     };
 };
