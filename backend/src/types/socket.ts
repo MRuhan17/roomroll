@@ -1,4 +1,5 @@
 export const SocketEvents = {
+    Error: 'ERROR',
     JoinCampaign: 'JOIN_CAMPAIGN',
     LeaveCampaign: 'LEAVE_CAMPAIGN',
     RequestAiNarration: 'REQUEST_AI_NARRATION',

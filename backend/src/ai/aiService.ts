@@ -15,10 +15,7 @@ const callOpenAi = async (prompt: string): Promise<string | null> => {
         return null;
     }
 
-    const runtimeFetch = (globalThis as unknown as {
-        fetch?: (input: string, init?: Record<string, unknown>) => Promise<{ ok: boolean; json: () => Promise<unknown> }>;
-    }).fetch;
-
+    const runtimeFetch = globalThis.fetch;
     if (!runtimeFetch) {
         return null;
     }

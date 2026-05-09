@@ -68,12 +68,12 @@ export const registerSocketHandlers = (io: Server) => {
         socket.on(SocketEvents.JoinCampaign, async (payload: { campaignId?: number }) => {
             const campaignId = Number(payload?.campaignId);
             if (!campaignId) {
-                socket.emit('ERROR', { message: 'campaignId required' });
+                socket.emit(SocketEvents.Error, { message: 'campaignId required' });
                 return;
             }
             const member = await getMember(campaignId, user.id);
             if (!member) {
-                socket.emit('ERROR', { message: 'Not a campaign member' });
+                socket.emit(SocketEvents.Error, { message: 'Not a campaign member' });
                 return;
             }
             leaveCampaignRoom(socket, io);

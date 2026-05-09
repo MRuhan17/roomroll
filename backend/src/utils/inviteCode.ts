@@ -3,11 +3,19 @@ import { randomBytes } from 'crypto';
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 export const generateInviteCode = (length = 6): string => {
-    const bytes = randomBytes(length);
+    const alphabetLength = INVITE_ALPHABET.length;
+    const maxByte = 256 - (256 % alphabetLength);
     let code = '';
-    for (let i = 0; i < length; i += 1) {
-        const index = bytes[i] % INVITE_ALPHABET.length;
-        code += INVITE_ALPHABET[index];
+    while (code.length < length) {
+        const bytes = randomBytes(length);
+        for (let i = 0; i < bytes.length && code.length < length; i += 1) {
+            const byte = bytes[i];
+            if (byte >= maxByte) {
+                continue;
+            }
+            const index = byte % alphabetLength;
+            code += INVITE_ALPHABET[index];
+        }
     }
     return code;
 };

@@ -7,11 +7,11 @@ import {
     joinCampaignHandler
 } from '../controllers/campaignController';
 import { authenticateRequest } from '../middleware/authMiddleware';
-import { rateLimit } from '../middleware/rateLimit';
+import { createRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-const campaignLimiter = rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'campaign' });
+const campaignLimiter = createRateLimiter({ windowMs: 60_000, max: 60, keyPrefix: 'campaign' });
 
 router.post('/', authenticateRequest, campaignLimiter, createCampaignHandler);
 router.post('/join', authenticateRequest, campaignLimiter, joinCampaignHandler);
