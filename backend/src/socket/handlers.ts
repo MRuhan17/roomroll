@@ -4,14 +4,14 @@ import { presenceStore } from '../campaign-engine/presenceStore';
 import { getCampaignSnapshot } from '../services/campaignStateService';
 import { getMember } from '../services/campaignService';
 import { isDiceType, rollDice, storeDiceRoll } from '../services/diceService';
-import { moveToken } from '../services/tokenService';
+import { createToken, moveToken, updateToken, deleteToken } from '../services/tokenService';
 import { updateRevealState } from '../services/mapService';
 import { createCampaignEvent } from '../services/eventService';
 import { appendNarrationLog } from '../services/memoryService';
 import { createWorldEvent } from '../services/worldEventService';
 import { upsertQuest } from '../services/questService';
 import { startSession, endSession } from '../services/sessionService';
-import { generateNarration } from '../ai/aiService';
+import { generateNarration, generateAiWorldEvent, updateNpcRelationship } from '../ai/aiService';
 import { SocketEvents } from '../types/socket';
 import { DiceRollRequest } from '../types/dice';
 import { AuthUser } from '../types/auth';
@@ -136,6 +136,81 @@ export const registerSocketHandlers = (io: Server) => {
             });
         });
 
+        socket.on(SocketEvents.TokenCreated, async (payload: { mapId?: number; tokenType?: 'player' | 'enemy' | 'npc' | 'boss'; label?: string; hpCurrent?: number; hpMax?: number; position?: { x: number; y: number; snapped?: boolean }; isHidden?: boolean }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId || !payload?.mapId || !payload?.tokenType || !payload?.position) {
+                return;
+            }
+            const token = await createToken({
+                campaignId,
+                mapId: payload.mapId,
+                tokenType: payload.tokenType,
+                label: payload.label,
+                hpCurrent: payload.hpCurrent,
+                hpMax: payload.hpMax,
+                position: payload.position,
+                isHidden: payload.isHidden
+            });
+            io.to(campaignRoom(campaignId)).emit(SocketEvents.TokenCreated, {
+                userId: user.id,
+                token
+            });
+        });
+
+        socket.on(SocketEvents.TokenUpdated, async (payload: { tokenId?: number; hpCurrent?: number; hpMax?: number; label?: string; isHidden?: boolean }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId || !payload?.tokenId) {
+                return;
+            }
+            const token = await updateToken(campaignId, payload.tokenId, {
+                hp_current: payload.hpCurrent,
+                hp_max: payload.hpMax,
+                label: payload.label,
+                is_hidden: payload.isHidden
+            });
+            io.to(campaignRoom(campaignId)).emit(SocketEvents.TokenUpdated, {
+                userId: user.id,
+                token
+            });
+        });
+
+        socket.on(SocketEvents.TokenDeleted, async (payload: { tokenId?: number }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId || !payload?.tokenId) {
+                return;
+            }
+            await deleteToken(campaignId, payload.tokenId);
+            io.to(campaignRoom(campaignId)).emit(SocketEvents.TokenDeleted, {
+                userId: user.id,
+                tokenId: payload.tokenId
+            });
+        });
+
+        socket.on(SocketEvents.MapViewport, (payload: { x?: number; y?: number; zoom?: number }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId || payload?.x == null || payload?.y == null || payload?.zoom == null) {
+                return;
+            }
+            socket.to(campaignRoom(campaignId)).emit(SocketEvents.MapViewport, {
+                userId: user.id,
+                x: payload.x,
+                y: payload.y,
+                zoom: payload.zoom
+            });
+        });
+
+        socket.on(SocketEvents.CombatTurn, (payload: { tokenId?: number; round?: number }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId) {
+                return;
+            }
+            io.to(campaignRoom(campaignId)).emit(SocketEvents.CombatTurn, {
+                userId: user.id,
+                tokenId: payload.tokenId,
+                round: payload.round
+            });
+        });
+
         socket.on(SocketEvents.MapRevealed, async (payload: { mapId?: number; revealState?: Record<string, unknown> }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId || !payload?.mapId || !payload?.revealState) {
@@ -199,6 +274,33 @@ export const registerSocketHandlers = (io: Server) => {
                 userId: user.id,
                 event
             });
+        });
+
+        socket.on(SocketEvents.RequestAiWorldEvent, async () => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId) return;
+            try {
+                const aiEvent = await generateAiWorldEvent(campaignId, user.id);
+                const event = await createWorldEvent({
+                    campaignId,
+                    title: aiEvent.title,
+                    description: aiEvent.description,
+                    status: 'active',
+                    createdBy: user.id
+                });
+                io.to(campaignRoom(campaignId)).emit(SocketEvents.WorldEvent, {
+                    userId: user.id,
+                    event
+                });
+            } catch (err) {
+                socket.emit(SocketEvents.Error, { message: err instanceof Error ? err.message : 'AI error' });
+            }
+        });
+
+        socket.on('UPDATE_NPC_RELATIONSHIP', async (payload: { npcName?: string; context?: string }) => {
+            const campaignId = socket.data.campaignId as number | undefined;
+            if (!campaignId || !payload?.npcName || !payload?.context) return;
+            await updateNpcRelationship(campaignId, payload.npcName, payload.context);
         });
 
         socket.on(SocketEvents.QuestUpdated, async (payload: { questId?: number; title?: string; description?: string; status?: string; progress?: Record<string, unknown> }) => {

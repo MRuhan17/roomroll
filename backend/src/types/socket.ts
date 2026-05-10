@@ -3,6 +3,7 @@ export const SocketEvents = {
     JoinCampaign: 'JOIN_CAMPAIGN',
     LeaveCampaign: 'LEAVE_CAMPAIGN',
     RequestAiNarration: 'REQUEST_AI_NARRATION',
+    RequestAiWorldEvent: 'REQUEST_AI_WORLD_EVENT',
     PlayerJoined: 'PLAYER_JOINED',
     PlayerLeft: 'PLAYER_LEFT',
     PlayerTyping: 'PLAYER_TYPING',
@@ -15,7 +16,12 @@ export const SocketEvents = {
     SessionStarted: 'SESSION_STARTED',
     SessionEnded: 'SESSION_ENDED',
     CampaignState: 'CAMPAIGN_STATE',
-    MapPing: 'MAP_PING'
+    MapPing: 'MAP_PING',
+    TokenCreated: 'TOKEN_CREATED',
+    TokenUpdated: 'TOKEN_UPDATED',
+    TokenDeleted: 'TOKEN_DELETED',
+    MapViewport: 'MAP_VIEWPORT',
+    CombatTurn: 'COMBAT_TURN'
 } as const;
 
 export type SocketEventName = typeof SocketEvents[keyof typeof SocketEvents];

@@ -26,6 +26,17 @@ export function AppLayout() {
 
           <nav className="mt-8 space-y-2">
             <NavLink
+              to="/campaigns"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                  isActive ? "bg-cyan-400/15 text-cyan-100" : "text-slate-300 hover:bg-white/5"
+                }`
+              }
+            >
+              <Shield className="h-4 w-4" />
+              Campaigns
+            </NavLink>
+            <NavLink
               to="/rooms"
               className={({ isActive }) =>
                 `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${

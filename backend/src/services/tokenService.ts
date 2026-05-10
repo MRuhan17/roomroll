@@ -70,3 +70,17 @@ export const updateToken = async (
     }
     return data as MapToken;
 };
+
+export const deleteToken = async (
+    campaignId: number,
+    tokenId: number
+): Promise<void> => {
+    const { error } = await supabase
+        .from('map_tokens')
+        .delete()
+        .eq('campaign_id', campaignId)
+        .eq('id', tokenId);
+    if (error) {
+        throw error;
+    }
+};
