@@ -2,16 +2,42 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { supabase } from '../config/db';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('auth-controller');
+
+function isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
+}
+
+function getJwtSecret() {
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+        throw new Error('JWT_SECRET is not configured');
+    }
+
+    return secret;
+}
 
 export const register = async (req: Request, res: Response) => {
     const { displayName, email, password } = req.body;
 
+    if (!isNonEmptyString(displayName) || !isNonEmptyString(email) || !isNonEmptyString(password)) {
+        return res.status(400).json({ message: 'Display name, email, and password are required' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
     try {
-        // Check if user exists
         const { data: userExists, error: checkError } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email);
+            .eq('email', normalizedEmail);
 
         if (checkError) throw checkError;
 
@@ -19,31 +45,38 @@ export const register = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // Insert user
         const { data: newUser, error: insertError } = await supabase
             .from('users')
             .insert([
-                { display_name: displayName, email, password_hash: passwordHash }
+                { display_name: displayName.trim(), email: normalizedEmail, password_hash: passwordHash }
             ])
             .select('id, display_name, email');
 
         if (insertError) throw insertError;
         if (!newUser || newUser.length === 0) throw new Error('User creation failed');
 
-        // Create token
         const token = jwt.sign(
             { id: newUser[0].id, email: newUser[0].email },
-            process.env.JWT_SECRET as string,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 
-        res.status(201).json({ user: newUser[0], token });
+        res.status(201).json({
+            user: {
+                id: newUser[0].id,
+                displayName: newUser[0].display_name,
+                email: newUser[0].email,
+            },
+            token,
+        });
     } catch (error) {
-        console.error(error);
+        logger.error('Registration failed', {
+            email: normalizedEmail,
+            error,
+        });
         res.status(500).json({ message: 'Server error during registration' });
     }
 };
@@ -51,11 +84,17 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
+    if (!isNonEmptyString(email) || !isNonEmptyString(password)) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
     try {
         const { data: user, error } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email);
+            .eq('email', normalizedEmail);
 
         if (error) throw error;
 
@@ -70,7 +109,7 @@ export const login = async (req: Request, res: Response) => {
 
         const token = jwt.sign(
             { id: user[0].id, email: user[0].email },
-            process.env.JWT_SECRET as string,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 
@@ -83,7 +122,10 @@ export const login = async (req: Request, res: Response) => {
             token
         });
     } catch (error) {
-        console.error(error);
+        logger.error('Login failed', {
+            email: normalizedEmail,
+            error,
+        });
         res.status(500).json({ message: 'Server error during login' });
     }
 };

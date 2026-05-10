@@ -63,7 +63,7 @@ export function RegisterPage() {
               </Label>
               <Input
                 id="name"
-                placeholder="DungeonMaster42"
+                placeholder="Enter display name"
                 className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
@@ -77,7 +77,7 @@ export function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@party.com"
+                placeholder="Enter email"
                 className="bg-background border-border/50 focus-visible:ring-primary/50 rounded-sm"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}

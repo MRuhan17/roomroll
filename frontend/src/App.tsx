@@ -4,6 +4,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { RoomLobbyPage } from "@/pages/RoomLobbyPage";
+import { RoomPage } from "@/pages/RoomPage";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           }
         >
           <Route index element={<RoomLobbyPage />} />
+          <Route path=":id" element={<RoomPage />} />
         </Route>
       </Routes>
     </div>
