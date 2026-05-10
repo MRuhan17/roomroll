@@ -3,6 +3,10 @@ import dotenv from 'dotenv';
 import express, { Express, Request, Response } from 'express';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
+import campaignRoutes from './routes/campaignRoutes';
+import mapRoutes from './routes/mapRoutes';
+import tokenRoutes from './routes/tokenRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { createLogger } from './lib/logger';
 import { requestLogger } from './middleware/requestLogger';
 
@@ -38,6 +42,10 @@ export function createApp() {
 
     app.use('/api/auth', authRoutes);
     app.use('/api/rooms', roomRoutes);
+    app.use('/api/campaigns', campaignRoutes);
+    app.use('/api/campaigns/:campaignId/maps', mapRoutes);
+    app.use('/api/campaigns/:campaignId/tokens', tokenRoutes);
+    app.use('/api/ai', aiRoutes);
 
     app.use((error: unknown, req: Request, res: Response, _next: unknown) => {
         logger.error('Unhandled application error', {
