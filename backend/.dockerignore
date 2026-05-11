@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+fly.toml
+Dockerfile
+.dockerignore
+.git
+.github
+tests
+jest.config.js

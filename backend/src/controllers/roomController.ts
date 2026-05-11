@@ -230,8 +230,8 @@ export const fetchRooms = async (req: AuthRequest, res: Response) => {
         if (fetchError) throw fetchError;
 
         const rooms = (participants || [])
-            .map((participant) => getUniqueArrayValue((participant as { rooms?: RoomRow | RoomRow[] | null }).rooms))
-            .filter((room): room is RoomRow => Boolean(room))
+            .map((participant: any) => getUniqueArrayValue((participant as { rooms?: RoomRow | RoomRow[] | null }).rooms))
+            .filter((room: any): room is RoomRow => Boolean(room))
             .map(toRoomResponse);
 
         res.status(200).json(rooms);
@@ -295,7 +295,7 @@ export const fetchRoomDetails = async (req: AuthRequest, res: Response) => {
                     displayName: user.display_name,
                     email: user.email
                 };
-            }).filter((participant): participant is { id: number; displayName: string; email: string } => Boolean(participant))
+            }).filter((participant: any): participant is { id: number; displayName: string; email: string } => Boolean(participant))
         };
 
         res.status(200).json(roomInfo);

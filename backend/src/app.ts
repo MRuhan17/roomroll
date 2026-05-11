@@ -15,25 +15,12 @@ dotenv.config();
 
 const logger = createLogger('app');
 
-export function resolveCorsOrigin() {
-    if (!process.env.CORS_ORIGIN) {
-        return true;
-    }
-
-    return process.env.CORS_ORIGIN.split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
-}
+import { corsOptions } from './config/cors';
 
 export function createApp() {
     const app: Express = express();
 
-    app.use(
-        cors({
-            origin: resolveCorsOrigin(),
-            credentials: true,
-        })
-    );
+    app.use(cors(corsOptions));
     app.use(express.json());
     app.use(requestLogger);
 

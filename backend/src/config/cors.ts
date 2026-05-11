@@ -21,5 +21,6 @@ export const getCorsOrigins = (): string[] => {
 
 export const corsOptions = {
     origin: getCorsOrigins(),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true
 };
