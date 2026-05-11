@@ -1,18 +1,22 @@
 export const getCorsOrigins = (): string[] => {
-    const envOrigins = process.env.CORS_ORIGIN;
+    const envOrigins = process.env.CORS_ORIGIN || process.env.FRONTEND_URL;
+    const allowedOrigins = ['https://roomroll.co.in'];
+
     if (envOrigins) {
         const parsed = envOrigins
             .split(',')
             .map((origin) => origin.trim())
             .filter(Boolean);
-        if (parsed.length > 0) {
-            return parsed;
-        }
+        allowedOrigins.push(...parsed);
     }
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('CORS_ORIGIN must be set in production');
+
+    if (process.env.NODE_ENV !== 'production') {
+        allowedOrigins.push('http://localhost:5173');
+        allowedOrigins.push('http://localhost:3000');
     }
-    return ['http://localhost:5173'];
+
+    // Allow Vercel preview deployments
+    return allowedOrigins;
 };
 
 export const corsOptions = {

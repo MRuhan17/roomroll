@@ -15,6 +15,9 @@ import { generateNarration, generateAiWorldEvent, updateNpcRelationship } from '
 import { SocketEvents } from '../types/socket';
 import { DiceRollRequest } from '../types/dice';
 import { AuthUser } from '../types/auth';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('socket');
 
 const getTokenFromSocket = (socket: Socket): string | null => {
     const authToken = socket.handshake.auth?.token;
@@ -64,9 +67,11 @@ export const registerSocketHandlers = (io: Server) => {
 
     io.on('connection', (socket) => {
         const user = socket.data.user as AuthUser;
+        logger.info('User connected', { userId: user.id, socketId: socket.id });
 
         socket.on(SocketEvents.JoinCampaign, async (payload: { campaignId?: number }) => {
             const campaignId = Number(payload?.campaignId);
+            logger.info('Joining campaign', { userId: user.id, campaignId });
             if (!campaignId) {
                 socket.emit(SocketEvents.Error, { message: 'campaignId required' });
                 return;
@@ -358,7 +363,8 @@ export const registerSocketHandlers = (io: Server) => {
             });
         });
 
-        socket.on('disconnect', () => {
+        socket.on('disconnect', (reason) => {
+            logger.info('User disconnected', { userId: user.id, socketId: socket.id, reason });
             leaveCampaignRoom(socket, io);
         });
     });

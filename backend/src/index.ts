@@ -17,7 +17,7 @@ const io = initializeSocket(httpServer);
 registerRealtimeHandlers(io);
 
 httpServer.listen(port, () => {
-    logger.info('Server is running', { url: `http://localhost:${port}` });
+    logger.info('Server is running', { port });
 });
 
 export default app;

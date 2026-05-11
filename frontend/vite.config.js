@@ -8,4 +8,5 @@ export default defineConfig({
             "@": path.resolve(__dirname, "./src"),
         },
     },
+    envPrefix: "NEXT_PUBLIC_",
 });

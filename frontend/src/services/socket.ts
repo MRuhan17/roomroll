@@ -12,7 +12,7 @@ import type {
   NarrationSource,
 } from "@/types/campaign";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000";
+const baseURL = import.meta.env.NEXT_PUBLIC_SOCKET_URL;
 
 const SocketEvents = {
   Error: "ERROR",
@@ -191,6 +191,11 @@ export const connectSocket = (token: string) => {
       auth: {
         token,
       },
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      secure: true,
     });
     socketToken = token;
     registerSocketListeners(socket);

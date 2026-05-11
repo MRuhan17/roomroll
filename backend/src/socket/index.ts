@@ -7,7 +7,11 @@ let ioInstance: Server | null = null;
 
 export const initializeSocket = (httpServer: HttpServer): Server => {
     ioInstance = new Server(httpServer, {
-        cors: corsOptions
+        cors: corsOptions,
+        transports: ['websocket', 'polling'],
+        pingInterval: 10000,
+        pingTimeout: 5000,
+        allowEIO3: true // Support older clients if needed
     });
     registerSocketHandlers(ioInstance);
     return ioInstance;
