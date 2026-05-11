@@ -7,6 +7,7 @@ import campaignRoutes from './routes/campaignRoutes';
 import mapRoutes from './routes/mapRoutes';
 import tokenRoutes from './routes/tokenRoutes';
 import aiRoutes from './routes/aiRoutes';
+import characterRoutes from './routes/characterRoutes';
 import { createLogger } from './lib/logger';
 import { requestLogger } from './middleware/requestLogger';
 
@@ -45,6 +46,7 @@ export function createApp() {
     app.use('/api/campaigns', campaignRoutes);
     app.use('/api/campaigns/:campaignId/maps', mapRoutes);
     app.use('/api/campaigns/:campaignId/tokens', tokenRoutes);
+    app.use('/api/campaigns/:campaignId/characters', characterRoutes);
     app.use('/api/ai', aiRoutes);
 
     app.use((error: unknown, req: Request, res: Response, _next: unknown) => {

@@ -7,7 +7,7 @@ import {
     joinCampaignHandler
 } from '../controllers/campaignController';
 import { authenticateRequest } from '../middleware/authMiddleware';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const router = Router();
 
@@ -16,7 +16,7 @@ const campaignLimiter = rateLimit({
     limit: 60,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => `campaign:${req.user?.id ?? req.ip}`,
+    keyGenerator: (req) => `campaign:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
     message: { message: 'Too many requests' }
 });
 

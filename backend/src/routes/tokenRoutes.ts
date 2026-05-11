@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateRequest } from '../middleware/authMiddleware';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { createTokenHandler, moveTokenHandler, updateTokenHandler } from '../controllers/tokenController';
 
 const router = Router({ mergeParams: true });
@@ -10,7 +10,7 @@ const tokenLimiter = rateLimit({
     limit: 180,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => `token:${req.user?.id ?? req.ip}`,
+    keyGenerator: (req) => `token:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
     message: { message: 'Too many requests' }
 });
 

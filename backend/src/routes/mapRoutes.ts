@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateRequest } from '../middleware/authMiddleware';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { activateMapHandler, createMapHandler, updateRevealStateHandler } from '../controllers/mapController';
 
 const router = Router({ mergeParams: true });
@@ -10,7 +10,7 @@ const mapLimiter = rateLimit({
     limit: 120,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => `map:${req.user?.id ?? req.ip}`,
+    keyGenerator: (req) => `map:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
     message: { message: 'Too many requests' }
 });
 

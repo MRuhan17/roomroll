@@ -1,7 +1,9 @@
 import { supabase } from '../config/db';
 import { Campaign, CampaignEvent, CampaignMember, CampaignMemory, CampaignQuest, CampaignWorldEvent } from '../types/campaign';
+import { CampaignCharacter } from '../types/character';
 import { DiceRollRow } from '../types/dice';
 import { CampaignMap, MapToken } from '../types/map';
+import { listCharacters } from './characterService';
 
 export interface CampaignSnapshot {
     campaign: Campaign | null;
@@ -13,6 +15,7 @@ export interface CampaignSnapshot {
     recentEvents: CampaignEvent[];
     diceHistory: DiceRollRow[];
     memories: CampaignMemory[];
+    characters: CampaignCharacter[];
 }
 
 export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignSnapshot> => {
@@ -67,6 +70,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .order('updated_at', { ascending: false })
         .limit(10);
 
+    const charactersPromise = listCharacters(campaignId);
+
     const [
         campaignResult,
         membersResult,
@@ -75,7 +80,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         worldEventsResult,
         recentEventsResult,
         diceHistoryResult,
-        memoriesResult
+        memoriesResult,
+        characters
     ] = await Promise.all([
         campaignPromise,
         membersPromise,
@@ -84,7 +90,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         worldEventsPromise,
         recentEventsPromise,
         diceHistoryPromise,
-        memoriesPromise
+        memoriesPromise,
+        charactersPromise
     ]);
 
     let tokens: MapToken[] = [];
@@ -106,6 +113,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         worldEvents: (worldEventsResult.data ?? []) as CampaignWorldEvent[],
         recentEvents: (recentEventsResult.data ?? []) as CampaignEvent[],
         diceHistory: (diceHistoryResult.data ?? []) as DiceRollRow[],
-        memories: (memoriesResult.data ?? []) as CampaignMemory[]
+        memories: (memoriesResult.data ?? []) as CampaignMemory[],
+        characters
     };
 };

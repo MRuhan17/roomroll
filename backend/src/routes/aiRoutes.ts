@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateRequest } from '../middleware/authMiddleware';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { createMemoryHandler, generateNarrationHandler } from '../controllers/aiController';
 
 const router = Router();
@@ -10,7 +10,7 @@ const aiLimiter = rateLimit({
     limit: 30,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => `ai:${req.user?.id ?? req.ip}`,
+    keyGenerator: (req) => `ai:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
     message: { message: 'Too many requests' }
 });
 
