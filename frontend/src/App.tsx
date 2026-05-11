@@ -6,14 +6,24 @@ import { RegisterPage } from "@/pages/RegisterPage";
 import { RoomLobbyPage } from "@/pages/RoomLobbyPage";
 import { RoomPage } from "@/pages/RoomPage";
 import { CampaignDashboardPage } from "@/pages/CampaignDashboardPage";
+import { LandingPage } from "@/pages/LandingPage";
+import { OnboardingPage } from "@/pages/OnboardingPage";
 
 export default function App() {
   return (
     <div className="min-h-screen">
       <Routes>
-        <Route path="/" element={<Navigate to="/campaigns" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/campaigns"
           element={
@@ -35,6 +45,7 @@ export default function App() {
           <Route index element={<RoomLobbyPage />} />
           <Route path=":id" element={<RoomPage />} />
         </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

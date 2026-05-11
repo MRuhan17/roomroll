@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, Plus, Search, BookOpen, Scroll, History } from "lucide-react";
@@ -25,6 +25,12 @@ export function CampaignDashboardPage() {
   });
 
   const activeCampaignId = activeCampaignQuery.data?.campaign?.id;
+
+  useEffect(() => {
+    if (activeCampaignQuery.isFetched && !activeCampaignQuery.data?.campaign) {
+      navigate("/onboarding");
+    }
+  }, [activeCampaignQuery.isFetched, activeCampaignQuery.data, navigate]);
 
   const snapshotQuery = useQuery({
     queryKey: ["campaignSnapshot", activeCampaignId],

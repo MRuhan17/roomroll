@@ -22,7 +22,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/rooms";
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/campaigns";
 
   const mutation = useMutation({
     mutationFn: login,

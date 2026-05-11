@@ -27,7 +27,7 @@ export function RegisterPage() {
     mutationFn: register,
     onSuccess: (data) => {
       setAuth(data.user, data.token);
-      navigate("/rooms", { replace: true });
+      navigate("/onboarding", { replace: true });
     },
     onError: (mutationError) => {
       setError(getApiErrorMessage(mutationError, "Registration failed"));

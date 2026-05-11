@@ -15,6 +15,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        display: ["Cormorant Garamond", "serif"],
         serif: ["Playfair Display", "serif"],
       },
       colors: {
