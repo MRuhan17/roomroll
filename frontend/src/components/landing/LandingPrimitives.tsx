@@ -93,7 +93,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         alt="Roomroll"
         width={logoSize.width}
         height={logoSize.height}
-        className={cn("block w-auto", compact ? "h-8" : "h-12")}
+        className="block"
       />
     </div>
   );
