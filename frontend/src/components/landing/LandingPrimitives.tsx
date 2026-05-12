@@ -23,7 +23,7 @@ const emberSeeds = [
 ];
 
 const roomrollLogoUrl =
-  "https://github.com/user-attachments/assets/4c879956-1860-4521-a1a4-4a8791398127";
+  "https://github.com/user-attachments/assets/3f659fdd-d426-4da8-bc75-c0dd62a6cc07";
 
 type RevealProps = {
   children: ReactNode;
