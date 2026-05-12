@@ -82,11 +82,17 @@ export function Embers({ className }: { className?: string }) {
 }
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
+  const logoSize = compact
+    ? { width: 128, height: 32 }
+    : { width: 192, height: 48 };
+
   return (
     <div className="flex items-center">
       <img
         src={roomrollLogoUrl}
         alt="Roomroll"
+        width={logoSize.width}
+        height={logoSize.height}
         className={cn("block w-auto", compact ? "h-8" : "h-12")}
       />
     </div>
