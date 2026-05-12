@@ -22,6 +22,9 @@ const emberSeeds = [
   { left: "88%", top: "84%", delay: "1.1s", duration: "10.1s" },
 ];
 
+const roomrollLogoUrl =
+  "https://github.com/user-attachments/assets/4c879956-1860-4521-a1a4-4a8791398127";
+
 type RevealProps = {
   children: ReactNode;
   className?: string;
@@ -79,22 +82,19 @@ export function Embers({ className }: { className?: string }) {
 }
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
+  const logoSize = compact
+    ? { width: 128, height: 32 }
+    : { width: 192, height: 48 };
+
   return (
-    <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          "relative flex items-center justify-center",
-          compact ? "h-8 w-8" : "h-10 w-10",
-        )}
-      >
-        <span className="absolute inset-0 rotate-45 rounded-[0.5rem] border border-[#7d5a27]/70 bg-black/50 shadow-[0_0_0_1px_rgba(229,185,88,0.12),0_0_24px_rgba(146,30,22,0.12)]" />
-        <span className="relative font-display text-base font-semibold tracking-[0.22em] text-[#d6b15a]">
-          R
-        </span>
-      </div>
-      <span className="font-sans text-sm font-medium tracking-[0.22em] text-[#f1ede4]">
-        ROOMROLL
-      </span>
+    <div className="flex items-center">
+      <img
+        src={roomrollLogoUrl}
+        alt="Roomroll"
+        width={logoSize.width}
+        height={logoSize.height}
+        className="block"
+      />
     </div>
   );
 }
