@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useWorldStore } from '../../store/useWorldStore';
-import { useCampaignStore } from '../../store/useCampaignStore';
-import { useAuthStore } from '../../store/useAuthStore';
-import { LoreGrid } from '../../components/world/LoreGrid';
-import { FactionNetwork } from '../../components/world/FactionNetwork';
-import { CinematicTimeline } from '../../components/world/CinematicTimeline';
+import { useQuery } from '@tanstack/react-query';
+import { useWorldStore } from '@/store/useWorldStore';
+import { useAuthStore } from '@/store/authStore';
+import { LoreGrid } from '@/components/world/LoreGrid';
+import { FactionNetwork } from '@/components/world/FactionNetwork';
+import { CinematicTimeline } from '@/components/world/CinematicTimeline';
+import { getCampaign } from '@/services/campaigns';
 import { Globe, ArrowLeft, Book, Shield, Clock } from 'lucide-react';
 
 export const WorldArchivePage = () => {
@@ -16,15 +17,20 @@ export const WorldArchivePage = () => {
     const [activeTab, setActiveTab] = useState<'lore' | 'factions' | 'timeline'>('timeline');
     
     const { user } = useAuthStore();
-    const { currentCampaign, fetchCampaignDetails } = useCampaignStore();
     const { lore, factions, discoveries, worldEvents, fetchWorldData, discoverEntity } = useWorldStore();
 
+    const { data: campaignData } = useQuery({
+        queryKey: ['campaign', campaignId],
+        queryFn: () => getCampaign(campaignId),
+        enabled: !isNaN(campaignId),
+    });
+    const currentCampaign = campaignData?.campaign;
+
     useEffect(() => {
-        if (!currentCampaign) {
-            fetchCampaignDetails(campaignId);
+        if (!isNaN(campaignId)) {
+            fetchWorldData(campaignId);
         }
-        fetchWorldData(campaignId);
-    }, [campaignId]);
+    }, [campaignId, fetchWorldData]);
 
     const isDM = currentCampaign?.dm_user_id === user?.id;
 
@@ -81,10 +87,10 @@ export const WorldArchivePage = () => {
                         <CinematicTimeline discoveries={discoveries} worldEvents={worldEvents} />
                     )}
                     {activeTab === 'lore' && (
-                        <LoreGrid lore={lore} isDM={isDM} onDiscover={(id) => handleDiscover('lore', id)} />
+                        <LoreGrid lore={lore} isDM={isDM} onDiscover={(id: number) => handleDiscover('lore', id)} />
                     )}
                     {activeTab === 'factions' && (
-                        <FactionNetwork factions={factions} isDM={isDM} onDiscover={(id) => handleDiscover('faction', id)} />
+                        <FactionNetwork factions={factions} isDM={isDM} onDiscover={(id: number) => handleDiscover('faction', id)} />
                     )}
                 </div>
             </div>

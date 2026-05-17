@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../services/api';
+import { api } from '../services/api';
 import { WorldData, LoreEntry, Faction, Discovery, WorldEvent } from '../types/world';
 
 interface WorldState {
