@@ -1,0 +1,25 @@
+{
+  "name": "roomroll",
+  "version": "1.0.0",
+  "description": "RoomRoll is a lightweight tabletop room manager with email/password auth, room creation and invites, a live board powered by Socket.IO, and optional AI NPC generation.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MRuhan17/roomroll.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MRuhan17/roomroll/issues"
+  },
+  "homepage": "https://github.com/MRuhan17/roomroll#readme",
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4"
+  }
+}

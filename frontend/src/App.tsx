@@ -8,6 +8,8 @@ import { RoomPage } from "@/pages/RoomPage";
 import { CampaignDashboardPage } from "@/pages/CampaignDashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { OnboardingPage } from "@/pages/OnboardingPage";
+import { CharacterSheetPage } from "@/pages/CharacterSheetPage";
+import { WorldArchivePage } from "@/pages/WorldArchivePage";
 
 export default function App() {
   return (
@@ -33,6 +35,8 @@ export default function App() {
           }
         >
           <Route index element={<CampaignDashboardPage />} />
+          <Route path=":campaignId/archive" element={<WorldArchivePage />} />
+          <Route path=":campaignId/characters/:characterId" element={<CharacterSheetPage />} />
         </Route>
         <Route
           path="/rooms"

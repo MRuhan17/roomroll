@@ -10,7 +10,13 @@ import {
   Sparkles,
   Users,
   Wand2,
+  CloudRain,
+  Music,
+  Wifi,
+  WifiOff,
+  AlertTriangle
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getCampaignSnapshot } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
 import { SocketEvents, connectSocket, disconnectSocket, getSocket } from "@/services/socket";
@@ -166,6 +172,8 @@ export function RoomPage() {
     actor: "",
   });
   const [cinematicNarrationId, setCinematicNarrationId] = useState<string | null>(null);
+  const [showEventOverlay, setShowEventOverlay] = useState<string | null>(null);
+  const [connectionQuality, setConnectionQuality] = useState<"excellent" | "poor" | "offline">("offline");
 
   const snapshotQuery = useQuery({
     queryKey: ["campaignSnapshot", campaignId],
@@ -217,8 +225,24 @@ export function RoomPage() {
 
     const socket = connectSocket(token);
     socket.emit(SocketEvents.JoinCampaign, { campaignId });
+    setConnectionQuality("excellent");
+
+    const onDisconnect = () => {
+      setConnectionQuality("offline");
+    };
+
+    const onConnect = () => {
+      setConnectionQuality("excellent");
+      // Re-join campaign on reconnect (session recovery)
+      socket.emit(SocketEvents.JoinCampaign, { campaignId });
+    };
+
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect", onConnect);
 
     return () => {
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect", onConnect);
       socket.emit(SocketEvents.LeaveCampaign);
       disconnectSocket();
     };
@@ -267,6 +291,18 @@ export function RoomPage() {
     const timer = setTimeout(() => setCinematicNarrationId(null), 3600);
     return () => clearTimeout(timer);
   }, [latestNarration?.id]);
+
+  useEffect(() => {
+    if (worldEvents.length > 0) {
+      const latestEvent = worldEvents[0];
+      const isRecent = new Date().getTime() - new Date(latestEvent.created_at).getTime() < 8000;
+      if (isRecent) {
+        setShowEventOverlay(latestEvent.title);
+        const timer = setTimeout(() => setShowEventOverlay(null), 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [worldEvents]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -388,7 +424,22 @@ export function RoomPage() {
   }
 
   if (snapshotQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-300">Summoning the campaign state...</div>;
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050507] text-[#f5efe2]">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="flex flex-col items-center gap-6"
+        >
+          <Sparkles className="h-12 w-12 text-amber-400 animate-pulse" />
+          <div className="space-y-2 text-center">
+            <h2 className="font-serif text-2xl uppercase tracking-[0.2em] text-[#f6f2e8]">Summoning the Realm</h2>
+            <p className="text-sm uppercase tracking-[0.3em] text-[#8e8778]">Aligning Leylines...</p>
+          </div>
+        </motion.div>
+      </div>
+    );
   }
 
   if (snapshotQuery.isError || !snapshotQuery.data?.snapshot) {
@@ -400,7 +451,12 @@ export function RoomPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <motion.section 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="space-y-6"
+    >
       <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.2),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_60%)]" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -434,18 +490,27 @@ export function RoomPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-white/5 cursor-pointer">
+              <CloudRain className="h-4 w-4 text-indigo-300" />
+              Heavy Rain
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-white/5 cursor-pointer">
+              <Music className="h-4 w-4 text-violet-300" />
+              Tension
+            </span>
             <span
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium",
+                "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
                 isSocketConnected
-                  ? "bg-emerald-500/10 text-emerald-300"
-                  : "bg-amber-500/10 text-amber-300",
+                  ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 cursor-default"
+                  : "bg-rose-500/10 text-rose-300 animate-pulse cursor-help"
               )}
+              title={isSocketConnected ? "Connection excellent" : "Attempting to recover session..."}
             >
-              <span className={cn("h-2 w-2 rounded-full", isSocketConnected ? "bg-emerald-400" : "bg-amber-300")} />
-              {isSocketConnected ? "Synchronized" : "Reconnecting"}
+              {isSocketConnected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+              {isSocketConnected ? "Synchronized" : "Reconnecting..."}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/5 transition-colors">
               <Users className="h-4 w-4 text-cyan-300" />
               {participants.filter((participant) => participant.isOnline).length}/{participants.length} online
             </span>
@@ -453,13 +518,41 @@ export function RoomPage() {
         </div>
       </div>
 
-      {lastError ? (
-        <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {lastError}
-        </div>
-      ) : null}
+      <AnimatePresence>
+        {!isSocketConnected && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 flex items-center gap-3 mb-6">
+              <AlertTriangle className="h-5 w-5 text-rose-400" />
+              <div>
+                <p className="font-medium">Connection Lost</p>
+                <p className="text-xs text-rose-200/70">Attempting to recover session state automatically. Changes may not be saved.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
+      <AnimatePresence>
+        {lastError && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 mb-6">
+              {lastError}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
         <div className="space-y-6">
           <Card className="overflow-hidden">
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
@@ -708,7 +801,7 @@ export function RoomPage() {
               {worldEvents.slice(0, 5).map((event) => (
                 <div
                   key={event.id}
-                  className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(15,23,42,0.92))] p-4"
+                  className="group rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(15,23,42,0.92))] p-4 transition-all hover:scale-[1.02] hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgba(250,204,21,0.15)] cursor-default"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="font-serif text-lg text-white">{event.title}</h3>
@@ -743,7 +836,7 @@ export function RoomPage() {
               {npcTokens.map((token) => (
                 <div
                   key={token.id}
-                  className="rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(16,185,129,0.12),rgba(15,23,42,0.94))] p-4"
+                  className="group rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(16,185,129,0.12),rgba(15,23,42,0.94))] p-4 transition-all hover:scale-[1.02] hover:border-emerald-500/30 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] cursor-default"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -873,6 +966,27 @@ export function RoomPage() {
           </div>
         </div>
       ) : null}
-    </section>
+
+      <AnimatePresence>
+        {showEventOverlay && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-rose-950/80 backdrop-blur-sm pointer-events-none"
+          >
+            <div className="text-center space-y-4">
+              <Sparkles className="h-16 w-16 text-rose-400 mx-auto animate-pulse" />
+              <h2 className="font-serif text-5xl md:text-7xl text-rose-100 uppercase tracking-widest drop-shadow-[0_0_30px_rgba(244,63,94,0.6)]">
+                World Event
+              </h2>
+              <p className="text-xl md:text-3xl text-rose-200/90 font-medium tracking-wide">
+                {showEventOverlay}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.section>
   );
 }

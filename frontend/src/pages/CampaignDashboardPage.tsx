@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Plus, Search, BookOpen, Scroll, History } from "lucide-react";
+import { Play, Plus, Search, BookOpen, Scroll, History, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createCampaign, getActiveCampaign, getCampaignSnapshot, joinCampaign } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
+import { useAuthStore } from "@/store/authStore";
 
 export function CampaignDashboardPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const [createName, setCreateName] = useState("");
   const [createDesc, setCreateDesc] = useState("");
   const [createWorld, setCreateWorld] = useState("");
@@ -65,6 +67,9 @@ export function CampaignDashboardPage() {
 
   const campaign = activeCampaignQuery.data?.campaign;
   const snapshot = snapshotQuery.data?.snapshot;
+  const activeCharacter = snapshot?.characters.find((character) => character.user_id === user?.id && !character.is_npc)
+    ?? snapshot?.characters.find((character) => !character.is_npc)
+    ?? snapshot?.characters[0];
 
   return (
     <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -116,10 +121,15 @@ export function CampaignDashboardPage() {
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                      <BookOpen className="h-4 w-4 text-amber-400" />
-                      Lore & Metadata
-                    </h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                        <BookOpen className="h-4 w-4 text-amber-400" />
+                        Lore & Metadata
+                      </h4>
+                      <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-white/10 hover:bg-white/5" onClick={() => navigate(`/campaigns/${campaign.id}/archive`)}>
+                        World Archive
+                      </Button>
+                    </div>
                     <p className="text-sm text-slate-400 leading-relaxed border-l-2 border-amber-500/30 pl-3">
                       {campaign.description || "No lore provided for this campaign yet."}
                     </p>
@@ -148,6 +158,61 @@ export function CampaignDashboardPage() {
                         <span className="italic text-slate-500">The journey has just begun. No memories recorded yet.</span>
                       )}
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+                <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                    <Shield className="h-4 w-4 text-emerald-300" />
+                    Character Sheet
+                  </h4>
+                  {activeCharacter ? (
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <p className="text-base font-medium text-white">{activeCharacter.name}</p>
+                        <p className="text-sm text-slate-400">
+                          {activeCharacter.class_name ?? "Wanderer"} • Level {activeCharacter.level}
+                        </p>
+                      </div>
+                      <Button
+                        className="w-full bg-emerald-600 text-white hover:bg-emerald-500"
+                        onClick={() => navigate(`/campaigns/${campaign.id}/characters/${activeCharacter.id}`)}
+                      >
+                        Open Character Sheet
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-400">
+                      No character is assigned to you in this campaign yet.
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                    <Scroll className="h-4 w-4 text-cyan-300" />
+                    Party Roster
+                  </h4>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    {snapshot?.characters?.length ? (
+                      snapshot.characters.map((character) => (
+                        <button
+                          key={character.id}
+                          type="button"
+                          onClick={() => navigate(`/campaigns/${campaign.id}/characters/${character.id}`)}
+                          className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 text-left transition hover:bg-white/[0.08]"
+                        >
+                          <p className="text-sm font-medium text-white">{character.name}</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {character.class_name ?? "Wanderer"} • Level {character.level}
+                          </p>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-400">No party characters have been created yet.</p>
+                    )}
                   </div>
                 </div>
               </div>
