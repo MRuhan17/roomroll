@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 import { supabase } from '../config/db';
 import { createLogger } from '../lib/logger';
-import { roomState } from '../realtime/roomState';
+import { broadcastToRoom } from '../realtime/roomState';
 
 const logger = createLogger('loreController');
 
 export const getWorldData = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id;
+        const campaignId = req.params.id as string;
 
         // Fetch lore
         const { data: lore, error: loreError } = await supabase
@@ -56,7 +56,7 @@ export const getWorldData = async (req: Request, res: Response): Promise<void> =
 
 export const createLoreEntry = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id;
+        const campaignId = req.params.id as string;
         const { title, category, content, is_secret, is_discovered } = req.body;
 
         const { data, error } = await supabase
@@ -69,7 +69,7 @@ export const createLoreEntry = async (req: Request, res: Response): Promise<void
         
         // If it starts discovered, notify players in room (if active)
         if (is_discovered) {
-            roomState.broadcastToRoom(campaignId, 'lore_discovered', { lore: data });
+            broadcastToRoom(campaignId, 'lore_discovered', { lore: data });
         }
 
         res.status(201).json(data);
@@ -81,7 +81,7 @@ export const createLoreEntry = async (req: Request, res: Response): Promise<void
 
 export const discoverEntity = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id;
+        const campaignId = req.params.id as string;
         const { entity_type, entity_id } = req.body;
         const userId = req.user?.id; // Assuming auth middleware sets req.user
 
@@ -102,7 +102,7 @@ export const discoverEntity = async (req: Request, res: Response): Promise<void>
         if (error) throw error;
 
         // Broadcast to clients
-        roomState.broadcastToRoom(campaignId, 'entity_discovered', { discovery: data, entity_type, entity_id });
+        broadcastToRoom(campaignId, 'entity_discovered', { discovery: data, entity_type, entity_id });
 
         res.status(201).json(data);
     } catch (error) {

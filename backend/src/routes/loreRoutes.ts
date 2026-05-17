@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { getWorldData, createLoreEntry, discoverEntity } from '../controllers/loreController';
-import { requireAuth } from '../middleware/authMiddleware';
+import { authenticateRequest } from '../middleware/authMiddleware';
 
 const router = Router({ mergeParams: true });
 
-router.use(requireAuth);
+router.use(authenticateRequest);
 
 router.get('/', getWorldData);
 router.post('/lore', createLoreEntry);

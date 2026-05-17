@@ -263,6 +263,10 @@ export function broadcastRoomState(roomId: string) {
     emitRoomState(roomId, state);
 }
 
+export function broadcastToRoom(roomId: string, event: string, payload: any) {
+    io?.to(roomId).emit(event, payload);
+}
+
 export function registerRealtimeHandlers(server: Server) {
     io = server;
 
