@@ -1,5 +1,6 @@
 console.log('[DB] LOADING DB CONFIG...');
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import dotenv from 'dotenv';
 import { createLogger } from '../lib/logger';
 
@@ -24,7 +25,14 @@ if (supabaseUrl) console.log('[DB] URL_START:', supabaseUrl.substring(0, 10), 'U
 
 try {
     console.log('[DB] Creating Supabase client...');
-    client = createClient(supabaseUrl, supabaseKey);
+    client = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false,
+        },
+        realtime: {
+            transport: WebSocket as any,
+        }
+    });
     console.log('[DB] Supabase client created.');
 } catch (error) {
     console.error('[DB] ERROR:', error);
