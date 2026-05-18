@@ -1,5 +1,6 @@
 import { supabase } from '../config/db';
 import { MapToken, MapTokenPosition } from '../types/map';
+import { getActiveSessionId } from './sessionService';
 
 export interface CreateTokenInput {
     campaignId: number;
@@ -13,11 +14,14 @@ export interface CreateTokenInput {
 }
 
 export const createToken = async (input: CreateTokenInput): Promise<MapToken> => {
+    const activeSessionId = await getActiveSessionId(input.campaignId);
     const { data, error } = await supabase
         .from('map_tokens')
         .insert([
             {
                 campaign_id: input.campaignId,
+                session_id: activeSessionId ?? null,
+                room_id: String(input.campaignId),
                 map_id: input.mapId,
                 token_type: input.tokenType,
                 label: input.label ?? null,

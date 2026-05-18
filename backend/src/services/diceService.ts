@@ -1,6 +1,7 @@
 import { supabase } from '../config/db';
 import { AdvantageState, DiceRollRequest, DiceRollResult, DiceRollRow, DiceType } from '../types/dice';
 import { rollDie } from '../utils/dice';
+import { getActiveSessionId } from './sessionService';
 
 const diceSides: Record<DiceType, number> = {
     d4: 4,
@@ -58,11 +59,14 @@ export const storeDiceRoll = async (
     roll: DiceRollResult,
     context?: string
 ): Promise<DiceRollRow> => {
+    const activeSessionId = await getActiveSessionId(campaignId);
     const { data, error } = await supabase
         .from('dice_rolls')
         .insert([
             {
                 campaign_id: campaignId,
+                session_id: activeSessionId ?? null,
+                room_id: String(campaignId),
                 user_id: userId,
                 dice_type: roll.diceType,
                 rolls: roll.rolls,

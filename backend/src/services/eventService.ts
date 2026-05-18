@@ -1,5 +1,6 @@
 import { supabase } from '../config/db';
 import { CampaignEvent } from '../types/campaign';
+import { getActiveSessionId } from './sessionService';
 
 export const createCampaignEvent = async (
     campaignId: number,
@@ -7,11 +8,14 @@ export const createCampaignEvent = async (
     content: Record<string, unknown> | null,
     createdBy: number | null
 ): Promise<CampaignEvent> => {
+    const activeSessionId = await getActiveSessionId(campaignId);
     const { data, error } = await supabase
         .from('campaign_events')
         .insert([
             {
                 campaign_id: campaignId,
+                session_id: activeSessionId ?? null,
+                room_id: String(campaignId),
                 event_type: eventType,
                 content,
                 created_by: createdBy

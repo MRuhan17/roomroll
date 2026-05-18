@@ -1,5 +1,6 @@
 import { supabase } from '../config/db';
 import { CampaignWorldEvent } from '../types/campaign';
+import { getActiveSessionId } from './sessionService';
 
 export interface CreateWorldEventInput {
     campaignId: number;
@@ -10,11 +11,14 @@ export interface CreateWorldEventInput {
 }
 
 export const createWorldEvent = async (input: CreateWorldEventInput): Promise<CampaignWorldEvent> => {
+    const activeSessionId = await getActiveSessionId(input.campaignId);
     const { data, error } = await supabase
         .from('campaign_world_events')
         .insert([
             {
                 campaign_id: input.campaignId,
+                session_id: activeSessionId ?? null,
+                room_id: String(input.campaignId),
                 title: input.title,
                 description: input.description ?? null,
                 status: input.status ?? 'active',

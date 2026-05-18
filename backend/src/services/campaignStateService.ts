@@ -21,11 +21,18 @@ export interface CampaignSnapshot {
 }
 
 export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignSnapshot> => {
-    const campaignPromise = supabase
+    const campaignResult = await supabase
         .from('campaigns')
         .select('*')
         .eq('id', campaignId)
         .single();
+
+    if (campaignResult.error) {
+        throw campaignResult.error;
+    }
+
+    const campaign = campaignResult.data as Campaign;
+    const activeSessionId = campaign?.current_session_state?.session_id;
 
     const membersPromise = supabase
         .from('campaign_members')
@@ -51,10 +58,18 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .eq('campaign_id', campaignId)
         .order('created_at', { ascending: false });
 
-    const recentEventsPromise = supabase
+    let recentEventsQuery = supabase
         .from('campaign_events')
         .select('*')
-        .eq('campaign_id', campaignId)
+        .eq('campaign_id', campaignId);
+
+    if (activeSessionId) {
+        recentEventsQuery = recentEventsQuery.eq('session_id', activeSessionId);
+    } else {
+        recentEventsQuery = recentEventsQuery.is('session_id', null);
+    }
+
+    const recentEventsPromise = recentEventsQuery
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -65,10 +80,18 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .order('created_at', { ascending: false })
         .limit(20);
 
-    const memoriesPromise = supabase
+    let memoriesQuery = supabase
         .from('campaign_memories')
         .select('*')
-        .eq('campaign_id', campaignId)
+        .eq('campaign_id', campaignId);
+
+    if (activeSessionId) {
+        memoriesQuery = memoriesQuery.eq('session_id', activeSessionId);
+    } else {
+        memoriesQuery = memoriesQuery.is('session_id', null);
+    }
+
+    const memoriesPromise = memoriesQuery
         .order('updated_at', { ascending: false })
         .limit(10);
 
@@ -85,7 +108,6 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
     const charactersPromise = listCharacters(campaignId);
 
     const [
-        campaignResult,
         membersResult,
         activeMapResult,
         questsResult,
@@ -97,7 +119,6 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         factionsResult,
         characters
     ] = await Promise.all([
-        campaignPromise,
         membersPromise,
         activeMapPromise,
         questsPromise,
@@ -121,7 +142,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
     }
 
     return {
-        campaign: (campaignResult.data ?? null) as Campaign | null,
+        campaign,
         members: (membersResult.data ?? []) as CampaignMember[],
         activeMap: (activeMapResult.data ?? null) as CampaignMap | null,
         tokens,

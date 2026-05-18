@@ -16,6 +16,7 @@ export interface CampaignSessionState {
   ended_at?: string;
   mode?: CampaignMode;
   active_scene?: string;
+  session_id?: string;
 }
 
 export interface Campaign {

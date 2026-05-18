@@ -1,5 +1,6 @@
 import { supabase } from '../config/db';
 import { CampaignQuest } from '../types/campaign';
+import { getActiveSessionId } from './sessionService';
 
 export interface UpsertQuestInput {
     campaignId: number;
@@ -11,6 +12,8 @@ export interface UpsertQuestInput {
 }
 
 export const upsertQuest = async (input: UpsertQuestInput): Promise<CampaignQuest> => {
+    const activeSessionId = await getActiveSessionId(input.campaignId);
+
     if (input.questId) {
         const { data, error } = await supabase
             .from('campaign_quests')
@@ -36,6 +39,8 @@ export const upsertQuest = async (input: UpsertQuestInput): Promise<CampaignQues
         .insert([
             {
                 campaign_id: input.campaignId,
+                session_id: activeSessionId ?? null,
+                room_id: String(input.campaignId),
                 title: input.title,
                 description: input.description ?? null,
                 status: input.status ?? 'active',
