@@ -16,6 +16,8 @@ export interface CampaignSnapshot {
     diceHistory: DiceRollRow[];
     memories: CampaignMemory[];
     characters: CampaignCharacter[];
+    lore: Record<string, any>[];
+    factions: Record<string, any>[];
 }
 
 export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignSnapshot> => {
@@ -70,6 +72,16 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .order('updated_at', { ascending: false })
         .limit(10);
 
+    const lorePromise = supabase
+        .from('campaign_lore_entries')
+        .select('*')
+        .eq('campaign_id', campaignId);
+
+    const factionsPromise = supabase
+        .from('campaign_factions')
+        .select('*')
+        .eq('campaign_id', campaignId);
+
     const charactersPromise = listCharacters(campaignId);
 
     const [
@@ -81,6 +93,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         recentEventsResult,
         diceHistoryResult,
         memoriesResult,
+        loreResult,
+        factionsResult,
         characters
     ] = await Promise.all([
         campaignPromise,
@@ -91,6 +105,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         recentEventsPromise,
         diceHistoryPromise,
         memoriesPromise,
+        lorePromise,
+        factionsPromise,
         charactersPromise
     ]);
 
@@ -114,6 +130,8 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         recentEvents: (recentEventsResult.data ?? []) as CampaignEvent[],
         diceHistory: (diceHistoryResult.data ?? []) as DiceRollRow[],
         memories: (memoriesResult.data ?? []) as CampaignMemory[],
-        characters
+        characters,
+        lore: (loreResult.data ?? []),
+        factions: (factionsResult.data ?? [])
     };
 };

@@ -56,7 +56,7 @@ export function RoomLobbyPage() {
       </div>
 
       {feedback ? (
-        <div className="rounded-md border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-100">
+        <div className="rounded-md border border-[#ab211f]/30 bg-[#8f1917]/10 px-4 py-2 text-sm text-[#d5b45d]">
           {feedback}
         </div>
       ) : null}
@@ -146,7 +146,7 @@ export function RoomLobbyPage() {
               {roomsQuery.data.map((room) => (
                 <li 
                   key={room.id} 
-                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition-colors"
+                  className="rounded-md border border-tavern-border bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition-colors"
                   onClick={() => navigate(`/rooms/${room.id}`)}
                 >
                   <p className="text-sm font-medium">{room.name}</p>

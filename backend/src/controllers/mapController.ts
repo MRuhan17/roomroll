@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { createMap, setActiveMap, updateRevealState } from '../services/mapService';
 import { getMember } from '../services/campaignService';
+import { supabase } from '../config/db';
 
 export const createMapHandler = async (req: Request, res: Response) => {
     const user = req.user;
@@ -8,24 +9,54 @@ export const createMapHandler = async (req: Request, res: Response) => {
         return res.status(401).json({ message: 'Unauthorized' });
     }
     const campaignId = Number(req.params.campaignId);
-    const { name, imageUrl, gridEnabled, gridSize } = req.body as {
+    const { name, imageUrl, imageBase64, gridEnabled, gridSize } = req.body as {
         name?: string;
         imageUrl?: string;
+        imageBase64?: string;
         gridEnabled?: boolean;
         gridSize?: number;
     };
-    if (!campaignId || !name || !imageUrl) {
-        return res.status(400).json({ message: 'Campaign, name, and imageUrl are required' });
+    
+    if (!campaignId || !name || (!imageUrl && !imageBase64)) {
+        return res.status(400).json({ message: 'Campaign, name, and image are required' });
     }
+
     const member = await getMember(campaignId, user.id);
     if (!member || member.role !== 'DM') {
         return res.status(403).json({ message: 'DM role required' });
     }
+    
+    let finalImageUrl = imageUrl;
+    
+    if (imageBase64) {
+        const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+            const mimeType = matches[1];
+            const buffer = Buffer.from(matches[2], 'base64');
+            const fileName = `${campaignId}/${Date.now()}-${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('maps')
+                .upload(fileName, buffer, {
+                    contentType: mimeType
+                });
+                
+            if (uploadError) {
+                return res.status(500).json({ message: 'Failed to upload map image' });
+            }
+            
+            const { data: publicUrlData } = supabase.storage.from('maps').getPublicUrl(fileName);
+            finalImageUrl = publicUrlData.publicUrl;
+        } else {
+             return res.status(400).json({ message: 'Invalid imageBase64 format' });
+        }
+    }
+
     try {
         const map = await createMap({
             campaignId,
             name,
-            imageUrl,
+            imageUrl: finalImageUrl as string,
             gridEnabled: Boolean(gridEnabled),
             gridSize
         });

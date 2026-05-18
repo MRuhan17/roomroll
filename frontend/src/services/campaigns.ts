@@ -25,3 +25,23 @@ export async function getCampaignSnapshot(campaignId: number) {
   const res = await api.get<{ snapshot: CampaignSnapshot }>(`/api/campaigns/${campaignId}/snapshot`);
   return res.data;
 }
+
+export async function updateCampaign(campaignId: number, description?: string, worldType?: string) {
+  const res = await api.put<{ campaign: Campaign }>(`/api/campaigns/${campaignId}`, { description, worldType });
+  return res.data;
+}
+
+export async function createMap(campaignId: number, name: string, imageBase64: string, gridEnabled: boolean = true, gridSize: number = 50) {
+  const res = await api.post(`/api/campaigns/${campaignId}/maps`, { name, imageBase64, gridEnabled, gridSize });
+  return res.data;
+}
+
+export async function createLore(campaignId: number, title: string, category: string, content: string) {
+  const res = await api.post(`/api/campaigns/${campaignId}/lore`, { title, category, content });
+  return res.data;
+}
+
+export async function createFaction(campaignId: number, name: string, description: string, baseLocation?: string) {
+  const res = await api.post(`/api/campaigns/${campaignId}/factions`, { name, description, baseLocation });
+  return res.data;
+}

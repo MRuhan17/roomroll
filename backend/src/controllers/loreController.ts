@@ -79,6 +79,30 @@ export const createLoreEntry = async (req: Request, res: Response): Promise<void
     }
 };
 
+export const createFaction = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const campaignId = req.params.id as string;
+        const { name, description, is_secret, is_discovered } = req.body;
+
+        const { data, error } = await supabase
+            .from('campaign_factions')
+            .insert([{ campaign_id: campaignId, name, description, is_secret, is_discovered }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        
+        if (is_discovered) {
+            broadcastToRoom(campaignId, 'faction_discovered', { faction: data });
+        }
+
+        res.status(201).json(data);
+    } catch (error) {
+        logger.error('Failed to create faction', { error });
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 export const discoverEntity = async (req: Request, res: Response): Promise<void> => {
     try {
         const campaignId = req.params.id as string;

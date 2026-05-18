@@ -4,7 +4,8 @@ import {
     getActiveCampaignHandler,
     getCampaignHandler,
     getCampaignSnapshotHandler,
-    joinCampaignHandler
+    joinCampaignHandler,
+    updateCampaignHandler
 } from '../controllers/campaignController';
 import { authenticateRequest } from '../middleware/authMiddleware';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
@@ -24,6 +25,7 @@ router.post('/', authenticateRequest, campaignLimiter, createCampaignHandler);
 router.post('/join', authenticateRequest, campaignLimiter, joinCampaignHandler);
 router.get('/active', authenticateRequest, campaignLimiter, getActiveCampaignHandler);
 router.get('/:campaignId', authenticateRequest, campaignLimiter, getCampaignHandler);
+router.put('/:campaignId', authenticateRequest, campaignLimiter, updateCampaignHandler);
 router.get('/:campaignId/snapshot', authenticateRequest, campaignLimiter, getCampaignSnapshotHandler);
 
 export default router;

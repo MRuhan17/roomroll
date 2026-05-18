@@ -26,7 +26,7 @@ export function OnboardingPage() {
       createCampaign(data.name, "", data.worldType),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
-      navigate(`/campaigns`);
+      navigate(`/campaigns/${data.campaign.id}/setup`);
     },
     onError: (err) => setError(getApiErrorMessage(err, "Could not forge world.")),
   });
@@ -123,7 +123,7 @@ export function OnboardingPage() {
                   <Label className="text-[10px] uppercase tracking-[0.3em] text-[#d5b45d]">Campaign Title</Label>
                   <Input 
                     placeholder="e.g. The Obsidian Spire" 
-                    className="bg-black/40 border-white/10 h-12 text-lg focus:border-[#d5b45d]/50 transition-colors"
+                    className="bg-black/40 border-tavern-border h-12 text-lg focus:border-[#d5b45d]/50 transition-colors"
                     value={createName}
                     onChange={(e) => setCreateName(e.target.value)}
                     required
@@ -133,7 +133,7 @@ export function OnboardingPage() {
                   <Label className="text-[10px] uppercase tracking-[0.3em] text-[#d5b45d]">World Setting</Label>
                   <Input 
                     placeholder="e.g. Grimdark Fantasy, Cosmic Horror" 
-                    className="bg-black/40 border-white/10 h-12 focus:border-[#d5b45d]/50 transition-colors"
+                    className="bg-black/40 border-tavern-border h-12 focus:border-[#d5b45d]/50 transition-colors"
                     value={createWorld}
                     onChange={(e) => setCreateWorld(e.target.value)}
                   />
@@ -186,7 +186,7 @@ export function OnboardingPage() {
                   <Label className="text-[10px] uppercase tracking-[0.3em] text-[#87a8ff]">Invite Code</Label>
                   <Input 
                     placeholder="e.g. OBSIDIAN-GATE" 
-                    className="bg-black/40 border-white/10 h-14 text-center text-2xl font-mono uppercase tracking-widest focus:border-[#87a8ff]/50 transition-colors"
+                    className="bg-black/40 border-tavern-border h-14 text-center text-2xl font-mono uppercase tracking-widest focus:border-[#87a8ff]/50 transition-colors"
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     required

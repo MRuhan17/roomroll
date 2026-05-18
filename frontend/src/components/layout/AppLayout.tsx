@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { DoorOpen, LogOut, Shield, Users } from "lucide-react";
+import { DoorOpen, LogOut, Shield, Users, Flame, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
+import { AmbientBackdrop, Embers, BrandMark } from "@/components/landing/LandingPrimitives";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -14,69 +15,71 @@ export function AppLayout() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0 bg-roomroll-grid bg-[size:72px_72px] opacity-20" />
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden font-sans">
+      <AmbientBackdrop />
+      <Embers className="opacity-40" />
+      
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-[280px_1fr]">
-        <aside className="glass-panel border-b border-white/10 p-5 lg:border-b-0 lg:border-r">
-          <Link to="/rooms" className="inline-flex items-center gap-2 text-lg font-semibold">
-            <Shield className="h-5 w-5 text-cyan-300" />
-            Roomroll
+        <aside className="tavern-card border-b border-tavern-border p-6 lg:border-b-0 lg:border-r relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xl z-[-1]" />
+          
+          <Link to="/rooms" className="inline-flex items-center gap-3">
+            <Flame className="h-6 w-6 text-[#ab211f]" />
+            <h1 className="text-2xl font-display font-bold uppercase tracking-widest text-[#f5efe2]">Roomroll</h1>
           </Link>
-          <p className="mt-1 text-sm text-muted-foreground">Realtime tabletop rooms</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[#d5b45d]/70">The Digital Tavern</p>
 
-          <nav className="mt-8 space-y-2">
+          <nav className="mt-12 space-y-3">
             <NavLink
               to="/campaigns"
               className={({ isActive }) =>
-                `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
-                  isActive ? "bg-cyan-400/15 text-cyan-100" : "text-slate-300 hover:bg-white/5"
+                `flex items-center gap-3 rounded px-4 py-3 text-sm uppercase tracking-widest transition-all duration-300 border ${
+                  isActive 
+                  ? "bg-[#ab211f]/20 text-[#f5efe2] border-[#ab211f]/50 shadow-[0_0_15px_rgba(171,33,31,0.2)]" 
+                  : "text-[#cbc3b5]/70 border-transparent hover:bg-white/5 hover:text-[#f5efe2]"
                 }`
               }
             >
-              <Shield className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" />
               Campaigns
             </NavLink>
             <NavLink
               to="/rooms"
               className={({ isActive }) =>
-                `flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
-                  isActive ? "bg-cyan-400/15 text-cyan-100" : "text-slate-300 hover:bg-white/5"
+                `flex items-center gap-3 rounded px-4 py-3 text-sm uppercase tracking-widest transition-all duration-300 border ${
+                  isActive 
+                  ? "bg-[#ab211f]/20 text-[#f5efe2] border-[#ab211f]/50 shadow-[0_0_15px_rgba(171,33,31,0.2)]" 
+                  : "text-[#cbc3b5]/70 border-transparent hover:bg-white/5 hover:text-[#f5efe2]"
                 }`
               }
             >
               <Users className="h-4 w-4" />
-              Room Lobby
+              Tavern Lobby
             </NavLink>
           </nav>
 
-          <div className="mt-8 rounded-lg border border-white/10 bg-white/5 p-3">
-            <p className="text-xs uppercase tracking-wider text-slate-400">Room list</p>
-            <p className="mt-2 text-sm text-slate-300">Rooms will populate here as API wiring is finalized.</p>
+          <div className="mt-12 rounded border border-[#d5b45d]/20 bg-black/50 p-4">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[#d5b45d]">Current Quests</p>
+            <p className="mt-2 text-sm text-[#cbc3b5]/60 leading-relaxed font-serif italic">Your active adventures will be chronicled here.</p>
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-col">
-          <header className="glass-panel flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex min-h-screen flex-col relative z-10">
+          <header className="tavern-card flex items-center justify-between border-b border-tavern-border px-8 py-5">
             <div>
-              <p className="text-xs uppercase tracking-wider text-slate-400">Signed in as</p>
-              <p className="text-sm font-medium">{user?.displayName ?? user?.email ?? "Unknown user"}</p>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-[#d5b45d]/70">Adventurer</p>
+              <p className="text-base font-display text-[#f5efe2] tracking-wider">{user?.displayName ?? user?.email ?? "Traveler"}</p>
             </div>
-            <Button variant="secondary" onClick={onLogout} className="gap-2">
+            <Button variant="outline" onClick={onLogout} className="gap-2 border-[#d5b45d]/30 text-[#d5b45d] hover:bg-[#d5b45d]/10 hover:text-[#f5efe2] font-display uppercase tracking-widest text-xs">
               <LogOut className="h-4 w-4" />
-              Logout
+              Depart
             </Button>
           </header>
 
-          <main className="flex-1 px-5 py-6">
+          <main className="flex-1 px-8 py-8 overflow-y-auto tavern-bg">
             <Outlet />
           </main>
         </div>
-      </div>
-      <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-cyan-500/30 blur-[110px]" />
-      <div className="pointer-events-none absolute -right-16 bottom-20 h-72 w-72 rounded-full bg-amber-500/20 blur-[110px]" />
-      <div className="pointer-events-none absolute bottom-6 right-6 text-xs text-slate-500">
-        <DoorOpen className="mr-1 inline h-3.5 w-3.5" />
-        Phase 2 Lobby
       </div>
     </div>
   );

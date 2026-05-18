@@ -136,11 +136,10 @@ export function TacticalMap({
   };
 
   return (
-    <div className={`relative w-full h-[600px] bg-zinc-950 overflow-hidden border border-white/10 rounded-lg shadow-2xl transition-all duration-700 ${mode === 'narration' ? 'opacity-30 grayscale saturate-0 pointer-events-none blur-sm' : 'opacity-100'}`}>
-      
+    <div className={`relative w-full h-[600px] tavern-bg overflow-hidden tavern-border border rounded-lg shadow-2xl transition-all duration-700 ${mode === 'narration' ? 'opacity-30 grayscale saturate-0 pointer-events-none blur-sm' : 'opacity-100'}`}>
       {/* Map Tools Header (DM & Player) */}
       <div className="absolute top-4 left-4 z-20 flex gap-2">
-        <Card className="bg-black/60 backdrop-blur-md border-white/10 p-1 flex items-center gap-1">
+        <Card className="tavern-card backdrop-blur-md tavern-border border p-1 flex items-center gap-1">
           <Button 
             variant={activeTool === 'pan' ? 'secondary' : 'ghost'} 
             size="sm" 
@@ -188,7 +187,7 @@ export function TacticalMap({
 
       {/* Zoom Controls */}
       <div className="absolute top-4 right-4 z-20 flex gap-2">
-        <Card className="bg-black/60 backdrop-blur-md border-white/10 p-1 flex items-center gap-1">
+        <Card className="tavern-card backdrop-blur-md tavern-border border p-1 flex items-center gap-1">
           <Button variant="ghost" size="sm" className="w-8 h-8 rounded" onClick={() => setScale(s => Math.max(s * 0.8, 0.2))}>-</Button>
           <span className="text-xs font-mono w-10 text-center text-zinc-400">{Math.round(scale * 100)}%</span>
           <Button variant="ghost" size="sm" className="w-8 h-8 rounded" onClick={() => setScale(s => Math.min(s * 1.2, 4))}>+</Button>
@@ -219,7 +218,7 @@ export function TacticalMap({
         >
           {/* Base Map Image */}
           <div 
-            className="absolute inset-0 bg-zinc-900 bg-cover bg-center bg-no-repeat rounded"
+            className="absolute inset-0 bg-[#0c0a09] bg-cover bg-center bg-no-repeat rounded"
             style={{ backgroundImage: `url(${imageUrl})` }}
           />
 
@@ -272,23 +271,23 @@ export function TacticalMap({
                 
                 {/* Token Body */}
                 <div 
-                  className={`w-full h-full rounded-full flex items-center justify-center shadow-lg border-2 ${
-                    token.type === 'player' ? 'bg-indigo-600 border-indigo-300' :
-                    token.type === 'enemy' ? 'bg-rose-900 border-rose-500' :
-                    token.type === 'boss' ? 'bg-purple-900 border-purple-400' :
-                    'bg-emerald-800 border-emerald-400'
+                  className={`w-full h-full rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.8)] border-2 ${
+                    token.type === 'player' ? 'bg-[#1a2b4c] border-[#87a8ff]' :
+                    token.type === 'enemy' ? 'bg-[#4a0d0c] border-[#ab211f]' :
+                    token.type === 'boss' ? 'bg-[#2a0845] border-[#d5b45d]' :
+                    'bg-[#0f2e1b] border-[#4ade80]'
                   } ${token.isHidden ? 'opacity-50 border-dashed' : ''} overflow-hidden`}
                   style={{ backgroundColor: token.color }}
                 >
-                  <span className="text-white font-bold text-xs pointer-events-none" style={{ fontSize: `${gridSize * 0.3}px` }}>
+                  <span className="text-[#f5efe2] font-display font-bold text-xs pointer-events-none drop-shadow-md" style={{ fontSize: `${gridSize * 0.3}px` }}>
                     {token.label.substring(0, 2).toUpperCase()}
                   </span>
                 </div>
                 
                 {/* Hidden Indicator */}
                 {token.isHidden && (
-                  <div className="absolute -top-1 -right-1 bg-black rounded-full p-0.5 border border-white/20">
-                    <EyeOff className="w-3 h-3 text-zinc-400" />
+                  <div className="absolute -top-1 -right-1 bg-[#0c0a09] rounded-full p-0.5 border tavern-border shadow-md">
+                    <EyeOff className="w-3 h-3 text-[#ab211f]" />
                   </div>
                 )}
 
@@ -307,18 +306,18 @@ export function TacticalMap({
 
                 {/* Hover Details */}
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 hidden group-hover:flex flex-col items-center pointer-events-none z-50">
-                  <div className="bg-black/90 backdrop-blur-md border border-white/10 rounded px-2 py-1.5 shadow-2xl whitespace-nowrap min-w-[100px]">
-                    <div className="text-xs font-bold text-white mb-0.5 flex justify-between gap-3">
+                  <div className="bg-[#0c0a09]/95 backdrop-blur-md border tavern-border rounded px-2 py-1.5 shadow-2xl whitespace-nowrap min-w-[100px]">
+                    <div className="text-xs font-bold text-[#f5efe2] mb-0.5 flex justify-between gap-3">
                       <span>{token.label}</span>
-                      <span className="uppercase text-[9px] text-zinc-400 tracking-wider">{token.type}</span>
+                      <span className="uppercase text-[9px] text-[#cbc3b5]/70 tracking-wider">{token.type}</span>
                     </div>
                     {token.hpMax !== undefined && (
-                      <div className="text-[10px] text-zinc-300 font-mono">
-                        HP: <span className={token.hpCurrent! <= token.hpMax * 0.2 ? 'text-rose-400 font-bold' : ''}>{token.hpCurrent}</span> / {token.hpMax}
+                      <div className="text-[10px] text-[#cbc3b5]/70 font-mono">
+                        HP: <span className={token.hpCurrent! <= token.hpMax * 0.2 ? 'text-[#ab211f] font-bold' : ''}>{token.hpCurrent}</span> / {token.hpMax}
                       </div>
                     )}
                   </div>
-                  <div className="w-2 h-2 bg-black/90 border-r border-b border-white/10 rotate-45 -mt-1.5" />
+                  <div className="w-2 h-2 bg-[#0c0a09]/95 border-r border-b tavern-border rotate-45 -mt-1.5" />
                 </div>
               </div>
             );

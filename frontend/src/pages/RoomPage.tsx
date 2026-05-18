@@ -61,12 +61,12 @@ function getNarrationBadge(entry: NarrationEntry) {
     case "dm":
       return {
         label: "DM override",
-        className: "bg-cyan-500/15 text-cyan-100 border-cyan-400/30",
+        className: "bg-[#ab211f]/15 text-[#d5b45d] border-[#ab211f]/30",
       };
     case "system":
       return {
         label: "System",
-        className: "bg-slate-500/15 text-slate-100 border-slate-400/30",
+        className: "tavern-card text-[#cbc3b5]/70 border-slate-400/30",
       };
     default:
       return {
@@ -92,7 +92,7 @@ function getSessionStatusClass(status?: string) {
     case "active":
       return "bg-emerald-500/10 text-emerald-300";
     case "ended":
-      return "bg-slate-500/10 text-slate-300";
+      return "tavern-card text-[#cbc3b5]/70";
     default:
       return "bg-amber-500/10 text-amber-300";
   }
@@ -457,7 +457,7 @@ export function RoomPage() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="space-y-6"
     >
-      <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.2),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+      <div className="relative overflow-hidden rounded-[28px] border border-tavern-border bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.2),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_60%)]" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
@@ -469,8 +469,8 @@ export function RoomPage() {
               {campaign?.world_type ? <span>{campaign.world_type}</span> : null}
             </div>
             <div>
-              <h1 className="font-serif text-3xl text-white drop-shadow-sm">{campaign?.name ?? "Campaign Session"}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300/85">
+              <h1 className="font-serif text-3xl text-[#f5efe2] drop-shadow-sm">{campaign?.name ?? "Campaign Session"}</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#cbc3b5]/70/85">
                 {campaign?.description ||
                   "The table is live. Guide the scene, surface AI world beats, and keep the party in sync between narration and tactics."}
               </p>
@@ -480,21 +480,21 @@ export function RoomPage() {
                 <span className="h-2 w-2 rounded-full bg-current opacity-80" />
                 {sessionState?.status ?? "idle"}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[#cbc3b5]/70">
                 Mode: {sessionState?.mode ?? "narration"}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[#cbc3b5]/70">
                 Invite code: <span className="font-mono text-amber-200">{campaign?.invite_code}</span>
               </span>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-white/5 cursor-pointer">
+            <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-sm text-[#cbc3b5]/70 transition-colors hover:bg-white/5 cursor-pointer">
               <CloudRain className="h-4 w-4 text-indigo-300" />
               Heavy Rain
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-white/5 cursor-pointer">
+            <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-sm text-[#cbc3b5]/70 transition-colors hover:bg-white/5 cursor-pointer">
               <Music className="h-4 w-4 text-violet-300" />
               Tension
             </span>
@@ -510,8 +510,8 @@ export function RoomPage() {
               {isSocketConnected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
               {isSocketConnected ? "Synchronized" : "Reconnecting..."}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/5 transition-colors">
-              <Users className="h-4 w-4 text-cyan-300" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-sm text-[#cbc3b5]/70 hover:bg-white/5 transition-colors">
+              <Users className="h-4 w-4 text-[#d5b45d]" />
               {participants.filter((participant) => participant.isOnline).length}/{participants.length} online
             </span>
           </div>
@@ -558,7 +558,7 @@ export function RoomPage() {
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <MapPinned className="h-5 w-5 text-cyan-300" />
+                  <MapPinned className="h-5 w-5 text-[#d5b45d]" />
                   Tactical Stage
                 </CardTitle>
                 <CardDescription>
@@ -567,7 +567,7 @@ export function RoomPage() {
                     : "No active map is set yet, so the board is using the placeholder stage."}
                 </CardDescription>
               </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-300">
+              <span className="rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">
                 {mapMode === "narration" ? "Cinematic focus" : "Tactical focus"}
               </span>
             </CardHeader>
@@ -614,14 +614,14 @@ export function RoomPage() {
               ) : null}
 
               {typingParticipants.length > 0 ? (
-                <div className="rounded-2xl border border-cyan-300/15 bg-cyan-500/10 p-4 text-sm text-cyan-50">
+                <div className="rounded-2xl border border-[#ab211f]/30 bg-[#ab211f]/10 p-4 text-sm text-[#d5b45d]">
                   <PresenceLine participants={typingParticipants} />
                 </div>
               ) : null}
 
               <div className="max-h-[560px] space-y-4 overflow-y-auto pr-1">
                 {narrationFeed.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-5 py-6 text-sm text-slate-300">
+                  <div className="rounded-2xl border border-dashed border-tavern-border bg-white/5 px-5 py-6 text-sm text-[#cbc3b5]/70">
                     No narration has been recorded yet. Use the AI panel to seed the scene or broadcast a DM beat.
                   </div>
                 ) : null}
@@ -634,7 +634,7 @@ export function RoomPage() {
                     <article
                       key={entry.id}
                       className={cn(
-                        "rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(6,10,18,0.96))] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
+                        "rounded-[22px] border border-tavern-border bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(6,10,18,0.96))] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
                         isHighlighted && "animate-narration-rise ring-1 ring-amber-300/35",
                       )}
                     >
@@ -644,15 +644,15 @@ export function RoomPage() {
                             {badge.label}
                           </span>
                           {entry.tone ? (
-                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-slate-300">
+                            <span className="rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-[#cbc3b5]/70">
                               {entry.tone}
                             </span>
                           ) : null}
                         </div>
-                        <span className="text-xs uppercase tracking-[0.24em] text-slate-400">{formatClock(entry.createdAt)}</span>
+                        <span className="text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">{formatClock(entry.createdAt)}</span>
                       </div>
-                      <p className="mt-4 font-serif text-xl leading-8 text-white">{entry.text}</p>
-                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                      <p className="mt-4 font-serif text-xl leading-8 text-[#f5efe2]">{entry.text}</p>
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#cbc3b5]/70">
                         <span>By {entry.authorLabel}</span>
                         {entry.playerAction ? <span>Prompted by: {entry.playerAction}</span> : null}
                       </div>
@@ -676,8 +676,8 @@ export function RoomPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                <label htmlFor="player-action" className="mb-2 block text-xs uppercase tracking-[0.24em] text-slate-400">
+              <div className="rounded-2xl border border-tavern-border bg-black/40 p-3">
+                <label htmlFor="player-action" className="mb-2 block text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">
                   Player action
                 </label>
                 <textarea
@@ -685,12 +685,12 @@ export function RoomPage() {
                   value={playerAction}
                   onChange={(event) => setPlayerAction(event.target.value)}
                   placeholder="The ranger steps into the torchlight and offers the relic to the priestess..."
-                  className="min-h-[120px] w-full resize-none rounded-xl border border-white/10 bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-300/40"
+                  className="min-h-[120px] w-full resize-none rounded-xl border border-tavern-border bg-transparent px-3 py-3 text-sm text-[#f5efe2] outline-none placeholder:text-[#cbc3b5]/70 focus:border-amber-300/40"
                 />
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Narration tone</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">Narration tone</p>
                 <div className="flex flex-wrap gap-2">
                   {toneOptions.map((tone) => (
                     <button
@@ -701,7 +701,7 @@ export function RoomPage() {
                         "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] transition",
                         narrationTone === tone.value
                           ? "border-amber-300/35 bg-amber-400/10 text-amber-100"
-                          : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10",
+                          : "border-tavern-border bg-white/5 text-[#cbc3b5]/70 hover:bg-white/10",
                       )}
                     >
                       {tone.label}
@@ -713,7 +713,7 @@ export function RoomPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Button
                   onClick={handleRequestNarration}
-                  className="h-11 justify-center gap-2 bg-amber-500 text-slate-950 hover:bg-amber-400"
+                  className="h-11 justify-center gap-2 bg-amber-500 text-[#cbc3b5]/70 hover:bg-amber-400"
                   disabled={!isSocketConnected || aiPending.narration}
                 >
                   {aiPending.narration ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
@@ -730,7 +730,7 @@ export function RoomPage() {
                 </Button>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+              <div className="rounded-2xl border border-tavern-border bg-white/5 px-4 py-3 text-sm text-[#cbc3b5]/70">
                 {typingParticipants.length > 0 ? (
                   <PresenceLine participants={typingParticipants} />
                 ) : showNarrationThinking ? (
@@ -746,7 +746,7 @@ export function RoomPage() {
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-cyan-300" />
+                  <Crown className="h-5 w-5 text-[#d5b45d]" />
                   DM Override
                 </CardTitle>
                 <CardDescription>
@@ -754,8 +754,8 @@ export function RoomPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <label htmlFor="dm-narration" className="mb-2 block text-xs uppercase tracking-[0.24em] text-slate-400">
+                <div className="rounded-2xl border border-tavern-border bg-black/40 p-3">
+                  <label htmlFor="dm-narration" className="mb-2 block text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">
                     Override narration
                   </label>
                   <textarea
@@ -763,7 +763,7 @@ export function RoomPage() {
                     value={dmNarrationDraft}
                     onChange={(event) => setDmNarrationDraft(event.target.value)}
                     placeholder="Sharpen the beat, correct a detail, or steer the next reveal..."
-                    className="min-h-[132px] w-full resize-none rounded-xl border border-white/10 bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/40"
+                    className="min-h-[132px] w-full resize-none rounded-xl border border-tavern-border bg-transparent px-3 py-3 text-sm text-[#f5efe2] outline-none placeholder:text-[#cbc3b5]/70 focus:border-[#ab211f]/30"
                   />
                 </div>
 
@@ -775,7 +775,7 @@ export function RoomPage() {
                   >
                     Load latest beat
                   </Button>
-                  <Button onClick={handleBroadcastNarration} className="gap-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400">
+                  <Button onClick={handleBroadcastNarration} className="gap-2 bg-[#ab211f] text-[#cbc3b5]/70 hover:bg-[#8f1917]">
                     Broadcast override
                   </Button>
                 </div>
@@ -793,7 +793,7 @@ export function RoomPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {worldEvents.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-5 text-sm text-slate-300">
+                <div className="rounded-2xl border border-dashed border-tavern-border bg-white/5 px-4 py-5 text-sm text-[#cbc3b5]/70">
                   No world events yet. Generate one from the AI panel when the session needs a larger ripple.
                 </div>
               ) : null}
@@ -801,18 +801,18 @@ export function RoomPage() {
               {worldEvents.slice(0, 5).map((event) => (
                 <div
                   key={event.id}
-                  className="group rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(15,23,42,0.92))] p-4 transition-all hover:scale-[1.02] hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgba(250,204,21,0.15)] cursor-default"
+                  className="group rounded-2xl border border-tavern-border bg-[linear-gradient(180deg,rgba(250,204,21,0.08),rgba(15,23,42,0.92))] p-4 transition-all hover:scale-[1.02] hover:border-amber-500/30 hover:shadow-[0_8px_30px_rgba(250,204,21,0.15)] cursor-default"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="font-serif text-lg text-white">{event.title}</h3>
+                    <h3 className="font-serif text-lg text-[#f5efe2]">{event.title}</h3>
                     <span className={cn("rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.24em]", getWorldEventStatusClass(event.status))}>
                       {event.status}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-200/85">
+                  <p className="mt-3 text-sm leading-6 text-[#cbc3b5]/70/85">
                     {event.description || "A shift has been recorded, but its full shape is still emerging."}
                   </p>
-                  <p className="mt-3 text-xs uppercase tracking-[0.24em] text-slate-500">{formatClock(event.created_at)}</p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">{formatClock(event.created_at)}</p>
                 </div>
               ))}
             </CardContent>
@@ -828,7 +828,7 @@ export function RoomPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {npcTokens.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-5 text-sm text-slate-300">
+                <div className="rounded-2xl border border-dashed border-tavern-border bg-white/5 px-4 py-5 text-sm text-[#cbc3b5]/70">
                   No NPC tokens are active yet. They’ll appear here as soon as the session spawns them.
                 </div>
               ) : null}
@@ -836,24 +836,24 @@ export function RoomPage() {
               {npcTokens.map((token) => (
                 <div
                   key={token.id}
-                  className="group rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(16,185,129,0.12),rgba(15,23,42,0.94))] p-4 transition-all hover:scale-[1.02] hover:border-emerald-500/30 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] cursor-default"
+                  className="group rounded-2xl border border-tavern-border bg-[linear-gradient(160deg,rgba(16,185,129,0.12),rgba(15,23,42,0.94))] p-4 transition-all hover:scale-[1.02] hover:border-emerald-500/30 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] cursor-default"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-serif text-lg text-white">{token.label ?? `NPC #${token.id}`}</h3>
+                      <h3 className="font-serif text-lg text-[#f5efe2]">{token.label ?? `NPC #${token.id}`}</h3>
                       <p className="mt-1 text-xs uppercase tracking-[0.24em] text-emerald-200/80">{token.token_type}</p>
                     </div>
                     {token.is_hidden ? (
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-slate-300">
+                      <span className="rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-[#cbc3b5]/70">
                         Hidden
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-200">
-                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-[#cbc3b5]/70">
+                    <div className="rounded-xl border border-tavern-border bg-black/40 px-3 py-2">
                       HP: {token.hp_current ?? "?"} / {token.hp_max ?? "?"}
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="rounded-xl border border-tavern-border bg-black/40 px-3 py-2">
                       Pos: {Math.round(token.position.x)}, {Math.round(token.position.y)}
                     </div>
                   </div>
@@ -888,22 +888,22 @@ export function RoomPage() {
 
               <div className="space-y-2">
                 {diceHistory.length === 0 ? (
-                  <p className="text-sm text-slate-300">No rolls recorded yet.</p>
+                  <p className="text-sm text-[#cbc3b5]/70">No rolls recorded yet.</p>
                 ) : (
                   diceHistory.slice(0, 4).map((roll) => {
                     const participant = participants.find((entry) => entry.userId === roll.user_id);
                     return (
                       <div
                         key={roll.id}
-                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                        className="flex items-center justify-between rounded-xl border border-tavern-border bg-white/5 px-3 py-2 text-sm"
                       >
                         <div>
-                          <p className="font-medium text-white">{participant?.label ?? `Adventurer #${roll.user_id}`}</p>
-                          <p className="text-xs text-slate-400">{roll.dice_type}{roll.context ? ` • ${roll.context}` : ""}</p>
+                          <p className="font-medium text-[#f5efe2]">{participant?.label ?? `Adventurer #${roll.user_id}`}</p>
+                          <p className="text-xs text-[#cbc3b5]/70">{roll.dice_type}{roll.context ? ` • ${roll.context}` : ""}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-violet-200">{roll.total}</p>
-                          <p className="text-[11px] text-slate-500">{formatClock(roll.created_at)}</p>
+                          <p className="text-[11px] text-[#cbc3b5]/70">{formatClock(roll.created_at)}</p>
                         </div>
                       </div>
                     );
@@ -915,7 +915,7 @@ export function RoomPage() {
                 {participants.map((participant) => (
                   <div
                     key={participant.userId}
-                    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-xl border border-tavern-border bg-white/5 px-3 py-2 text-sm"
                   >
                     <div className="flex items-center gap-3">
                       <span
@@ -925,8 +925,8 @@ export function RoomPage() {
                         )}
                       />
                       <div>
-                        <p className="font-medium text-white">{participant.label}</p>
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">{participant.role}</p>
+                        <p className="font-medium text-[#f5efe2]">{participant.label}</p>
+                        <p className="text-[11px] uppercase tracking-[0.24em] text-[#cbc3b5]/70">{participant.role}</p>
                       </div>
                     </div>
                     {participant.role === "DM" ? (
@@ -943,25 +943,28 @@ export function RoomPage() {
       </div>
 
       {rollingAnimation.active ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div
-              className={cn(
-                "font-serif text-7xl text-amber-200 drop-shadow-[0_0_24px_rgba(251,191,36,0.5)] transition-all duration-500",
-                rollingAnimation.result === null ? "animate-spin-slow scale-95" : "scale-125",
-              )}
-            >
-              {rollingAnimation.result === null ? rollingAnimation.type : rollingAnimation.result}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="flex flex-col items-center gap-6 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full shadow-[0_0_80px_rgba(213,180,93,0.3)] animate-pulse" />
+              <div
+                className={cn(
+                  "relative font-display text-8xl text-[#d5b45d] drop-shadow-[0_0_24px_rgba(213,180,93,0.8)] transition-all duration-700",
+                  rollingAnimation.result === null ? "animate-spin-slow scale-90" : "scale-125",
+                )}
+              >
+                {rollingAnimation.result === null ? rollingAnimation.type : rollingAnimation.result}
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-lg font-medium text-white">
+            <div className="space-y-2 mt-4 z-10 relative">
+              <p className="text-2xl font-serif italic text-[#f5efe2] tracking-wide">
                 {rollingAnimation.result === null
                   ? `${rollingAnimation.actor} is rolling ${rollingAnimation.type}...`
-                  : `${rollingAnimation.actor} rolled ${rollingAnimation.type}`}
+                  : `${rollingAnimation.actor} rolled a ${rollingAnimation.result}`}
               </p>
-              {rollingAnimation.result !== null ? (
-                <p className="text-sm uppercase tracking-[0.28em] text-amber-100/80">Total: {rollingAnimation.result}</p>
-              ) : null}
+              {rollingAnimation.result !== null && (
+                <div className="h-px w-32 bg-gradient-to-r from-transparent via-[#ab211f] to-transparent mx-auto mt-4" />
+              )}
             </div>
           </div>
         </div>
@@ -970,17 +973,18 @@ export function RoomPage() {
       <AnimatePresence>
         {showEventOverlay && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-rose-950/80 backdrop-blur-sm pointer-events-none"
+            exit={{ opacity: 0, scale: 1.05 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c0a09]/95 backdrop-blur-md pointer-events-none"
           >
-            <div className="text-center space-y-4">
-              <Sparkles className="h-16 w-16 text-rose-400 mx-auto animate-pulse" />
-              <h2 className="font-serif text-5xl md:text-7xl text-rose-100 uppercase tracking-widest drop-shadow-[0_0_30px_rgba(244,63,94,0.6)]">
+            <div className="text-center space-y-6">
+              <Sparkles className="h-16 w-16 text-[#ab211f] mx-auto animate-pulse" />
+              <h2 className="font-display text-5xl md:text-7xl text-[#f5efe2] uppercase tracking-[0.3em] drop-shadow-[0_0_30px_rgba(171,33,31,0.6)]">
                 World Event
               </h2>
-              <p className="text-xl md:text-3xl text-rose-200/90 font-medium tracking-wide">
+              <div className="h-px w-48 bg-gradient-to-r from-transparent via-[#d5b45d] to-transparent mx-auto" />
+              <p className="text-2xl md:text-4xl text-[#d5b45d] font-serif italic max-w-2xl mx-auto px-4 leading-relaxed">
                 {showEventOverlay}
               </p>
             </div>

@@ -98,3 +98,33 @@ export const getCampaignSnapshotHandler = async (req: Request, res: Response) =>
     const snapshot = await getCampaignSnapshot(campaignId);
     return res.json({ snapshot });
 };
+
+export const updateCampaignHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
+    }
+    const { description, worldType } = req.body as { description?: string, worldType?: string };
+    
+    // Quick update via supabase client directly since campaignService doesn't have it
+    const { supabase } = await import('../config/db');
+    const { data, error } = await supabase
+        .from('campaigns')
+        .update({ description, world_type: worldType })
+        .eq('id', campaignId)
+        .select('*')
+        .single();
+        
+    if (error) {
+        return res.status(500).json({ message: 'Failed to update campaign' });
+    }
+    return res.json({ campaign: data });
+};

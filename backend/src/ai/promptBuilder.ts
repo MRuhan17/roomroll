@@ -3,6 +3,7 @@ import { CampaignSnapshot } from '../services/campaignStateService';
 export const buildNarrationPrompt = (snapshot: CampaignSnapshot, playerAction: string, tone?: string): string => {
     const campaignName = snapshot.campaign?.name ?? 'the campaign';
     const worldType = snapshot.campaign?.world_type ?? 'fantasy';
+    const description = snapshot.campaign?.description ?? '';
     const members = snapshot.members.map((member) => `User ${member.user_id} (${member.role})`).join(', ');
     const quests = snapshot.quests.map((quest) => `${quest.title} [${quest.status}]`).join('; ');
     const worldEvents = snapshot.worldEvents.map((event) => event.title).join('; ');
@@ -12,14 +13,19 @@ export const buildNarrationPrompt = (snapshot: CampaignSnapshot, playerAction: s
         .map((event) => (event.content?.text as string) ?? '')
         .join(' ');
     const memories = snapshot.memories.map((memory) => memory.summary).join(' ');
+    const lore = snapshot.lore?.map(l => `${l.title}: ${l.content}`).join(' | ');
+    const factions = snapshot.factions?.map(f => `${f.name}: ${f.description}`).join(' | ');
 
     return [
         `You are the AI Dungeon Master for ${campaignName}, a ${worldType} campaign.`,
+        `Description/Rules: ${description}`,
         `Tone: ${tone ?? 'cinematic'}.`,
         `Players: ${members || 'unknown'}.`,
         `Active quests: ${quests || 'none'}.`,
         `World events: ${worldEvents || 'none'}.`,
         `Memory: ${memories || 'none'}.`,
+        `Lore: ${lore || 'none'}.`,
+        `Factions: ${factions || 'none'}.`,
         `Recent narration: ${recentNarration || 'none'}.`,
         `Player action: ${playerAction}`,
         `Respond with cinematic narration in 2-4 sentences, include immediate consequences or reactions.`
@@ -29,13 +35,19 @@ export const buildNarrationPrompt = (snapshot: CampaignSnapshot, playerAction: s
 const buildBaseContext = (snapshot: CampaignSnapshot): string => {
     const campaignName = snapshot.campaign?.name ?? 'the campaign';
     const worldType = snapshot.campaign?.world_type ?? 'fantasy';
+    const description = snapshot.campaign?.description ?? '';
     const memories = snapshot.memories.map((m) => m.summary).join('; ');
     const npcs = snapshot.tokens.filter(t => t.token_type === 'npc' || t.token_type === 'boss').map(t => t.label).join(', ');
+    const lore = snapshot.lore?.map(l => `${l.title}: ${l.content}`).join(' | ');
+    const factions = snapshot.factions?.map(f => `${f.name}: ${f.description}`).join(' | ');
     
     return [
         `Campaign: ${campaignName} (${worldType})`,
+        `Description/Rules: ${description}`,
         `Core Memories: ${memories || 'none'}`,
-        `Present NPCs/Entities: ${npcs || 'none'}`
+        `Present NPCs/Entities: ${npcs || 'none'}`,
+        `Lore: ${lore || 'none'}`,
+        `Factions: ${factions || 'none'}`
     ].join('\n');
 };
 

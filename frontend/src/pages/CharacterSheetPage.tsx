@@ -105,7 +105,7 @@ export function CharacterSheetPage() {
                 <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-amber-100">
                   Level {character.level}
                 </span>
-                <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                <span className="rounded-full border border-[#ab211f]/30 bg-[#8f1917]/10 px-3 py-1 text-[#d5b45d]">
                   {character.is_npc ? "NPC" : "Player Character"}
                 </span>
                 {ownedCharacter?.id === character.id ? (
@@ -119,7 +119,7 @@ export function CharacterSheetPage() {
         </div>
 
         {snapshot?.characters?.length ? (
-          <Card className="w-full max-w-md border-white/10 bg-black/20">
+          <Card className="w-full max-w-md border-tavern-border bg-black/20">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-slate-100">Party Roster</CardTitle>
               <CardDescription>Jump between party sheets in this campaign.</CardDescription>
@@ -133,8 +133,8 @@ export function CharacterSheetPage() {
                   className={cn(
                     "flex items-center justify-between rounded-xl border px-4 py-3 text-left transition",
                     entry.id === character?.id
-                      ? "border-cyan-400/40 bg-cyan-400/10 text-white"
-                      : "border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]",
+                      ? "border-[#ab211f]/30 bg-[#8f1917]/10 text-white"
+                      : "border-tavern-border bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]",
                   )}
                 >
                   <span>
@@ -143,7 +143,7 @@ export function CharacterSheetPage() {
                       {entry.class_name ?? "Wanderer"} • Level {entry.level}
                     </span>
                   </span>
-                  <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em]">
+                  <span className="rounded-full border border-tavern-border px-2 py-1 text-[10px] uppercase tracking-[0.22em]">
                     {entry.is_npc ? "NPC" : "Sheet"}
                   </span>
                 </button>
@@ -165,7 +165,7 @@ export function CharacterSheetPage() {
       {characterQuery.isLoading || snapshotQuery.isLoading ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-40 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+            <div key={index} className="h-40 animate-pulse rounded-2xl border border-tavern-border bg-white/5" />
           ))}
         </div>
       ) : character ? (
@@ -192,7 +192,7 @@ export function CharacterSheetPage() {
               current={readCurrentValue(character, ["mana_current", "mana"])}
               max={readMaxValue(character, ["mana_max", "max_mana"])}
             />
-            <Card className="overflow-hidden border-white/10 bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(8,8,10,0.88))]">
+            <Card className="overflow-hidden border-tavern-border bg-[linear-gradient(180deg,rgba(212,175,55,0.1),rgba(8,8,10,0.88))]">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
@@ -209,7 +209,7 @@ export function CharacterSheetPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <Card className="border-white/10 bg-black/20">
+            <Card className="border-tavern-border bg-black/20">
               <CardHeader>
                 <CardTitle className="text-xl text-slate-100">Character Sheet</CardTitle>
                 <CardDescription>Core combat, identity, and roleplay references for the table.</CardDescription>
@@ -217,7 +217,7 @@ export function CharacterSheetPage() {
               <CardContent className="space-y-6">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {Object.entries(character.ability_scores).map(([ability, score]) => (
-                    <div key={ability} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div key={ability} className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
                       <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{formatLabel(ability)}</p>
                       <div className="mt-3 flex items-end justify-between">
                         <span className="text-3xl font-semibold text-white">{score}</span>
@@ -235,7 +235,7 @@ export function CharacterSheetPage() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <Card className="border-white/10 bg-white/[0.03]">
+                  <Card className="border-tavern-border bg-white/[0.03]">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg text-slate-100">Passive Traits</CardTitle>
                       <CardDescription>Always-on perks, talents, and long-term advancements.</CardDescription>
@@ -262,7 +262,7 @@ export function CharacterSheetPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-white/10 bg-white/[0.03]">
+                  <Card className="border-tavern-border bg-white/[0.03]">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg text-slate-100">Status Effects</CardTitle>
                       <CardDescription>Live buffs, debuffs, conditions, and lingering magical states.</CardDescription>
@@ -280,16 +280,16 @@ export function CharacterSheetPage() {
             </Card>
 
             <div className="space-y-6">
-              <Card className="border-white/10 bg-black/20">
+              <Card className="border-tavern-border bg-black/20">
                 <CardHeader>
                   <CardTitle className="text-xl text-slate-100">Level Progression</CardTitle>
                   <CardDescription>XP pacing, level thresholds, and recent progression changes.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+                  <div className="rounded-2xl border border-[#ab211f]/30 bg-[#8f1917]/5 p-4">
                     <div className="flex items-end justify-between gap-4">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">Experience</p>
+                        <p className="text-xs uppercase tracking-[0.24em] text-[#d5b45d]/70">Experience</p>
                         <p className="mt-2 text-3xl font-semibold text-white">
                           {character.progression_summary.xp}
                         </p>
@@ -321,7 +321,7 @@ export function CharacterSheetPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-white/10 bg-black/20">
+              <Card className="border-tavern-border bg-black/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
                     <Coins className="h-5 w-5 text-amber-300" />
@@ -332,7 +332,7 @@ export function CharacterSheetPage() {
                 <CardContent className="grid gap-3 sm:grid-cols-2">
                   {Object.entries(character.currency).length ? (
                     Object.entries(character.currency).map(([currency, amount]) => (
-                      <div key={currency} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div key={currency} className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
                         <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{formatLabel(currency)}</p>
                         <p className="mt-2 text-2xl font-semibold text-white">{amount}</p>
                       </div>
@@ -346,10 +346,10 @@ export function CharacterSheetPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <Card className="border-white/10 bg-black/20">
+            <Card className="border-tavern-border bg-black/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
-                  <Shield className="h-5 w-5 text-cyan-300" />
+                  <Shield className="h-5 w-5 text-[#d5b45d]" />
                   Equipment Slots
                 </CardTitle>
                 <CardDescription>Quick view of every equipped item by slot.</CardDescription>
@@ -358,7 +358,7 @@ export function CharacterSheetPage() {
                 {EQUIPMENT_SLOTS.map((slot) => {
                   const equipped = findEquipment(character.equipment, slot);
                   return (
-                    <div key={slot} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div key={slot} className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
                       <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{formatLabel(slot)}</p>
                       <p className="mt-2 text-sm font-medium text-white">
                         {equipped?.item?.name ?? "Empty slot"}
@@ -374,7 +374,7 @@ export function CharacterSheetPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-black/20">
+            <Card className="border-tavern-border bg-black/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
                   <Backpack className="h-5 w-5 text-emerald-300" />
@@ -385,12 +385,12 @@ export function CharacterSheetPage() {
               <CardContent className="space-y-3">
                 {character.inventory.length ? (
                   character.inventory.map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div key={item.id} className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-medium text-white">{item.name}</p>
-                            <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-slate-300">
+                            <span className="rounded-full border border-tavern-border px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-slate-300">
                               {formatLabel(item.item_type)}
                             </span>
                             {item.rarity ? (
@@ -399,7 +399,7 @@ export function CharacterSheetPage() {
                               </span>
                             ) : null}
                             {item.equippable ? (
-                              <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-100">
+                              <span className="rounded-full border border-[#ab211f]/30 bg-[#8f1917]/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-[#d5b45d]">
                                 Equippable
                               </span>
                             ) : null}
@@ -422,7 +422,7 @@ export function CharacterSheetPage() {
             </Card>
           </div>
 
-          <Card className="border-white/10 bg-black/20">
+          <Card className="border-tavern-border bg-black/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl text-slate-100">
                 <TimerReset className="h-5 w-5 text-violet-300" />
@@ -460,12 +460,12 @@ function VitalCard({
   const palette = {
     rose: "border-rose-400/20 bg-rose-400/5 text-rose-100",
     amber: "border-amber-400/20 bg-amber-400/5 text-amber-100",
-    cyan: "border-cyan-400/20 bg-cyan-400/5 text-cyan-100",
+    cyan: "border-[#ab211f]/30 bg-[#8f1917]/5 text-[#d5b45d]",
   }[accent];
   const progress = current !== undefined && max !== undefined && max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
 
   return (
-    <Card className={cn("overflow-hidden border-white/10", palette)}>
+    <Card className={cn("overflow-hidden border-tavern-border", palette)}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div>
@@ -487,7 +487,7 @@ function VitalCard({
 
 function InfoPanel({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
       <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{title}</p>
       <p className="mt-3 text-sm leading-7 text-slate-300">{body}</p>
     </div>
@@ -516,7 +516,7 @@ function TraitGroup({
           {items.map((item) => (
             <span
               key={item}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-200"
+              className="rounded-full border border-tavern-border bg-white/[0.04] px-3 py-1 text-xs text-slate-200"
             >
               {item}
             </span>
@@ -536,7 +536,7 @@ function StatusEffectBadge({ effect }: { effect: CharacterStatusEffect }) {
         "rounded-2xl border p-4",
         effect.is_active
           ? getStatusEffectClass(effect.effect_type)
-          : "border-white/10 bg-white/[0.03] text-slate-300",
+          : "border-tavern-border bg-white/[0.03] text-slate-300",
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -554,10 +554,10 @@ function StatusEffectBadge({ effect }: { effect: CharacterStatusEffect }) {
 
 function ProgressionEntry({ entry }: { entry: CharacterProgressionLogEntry }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-white">{formatProgressionType(entry.change_type)}</p>
-        <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-slate-300">
+        <span className="rounded-full border border-tavern-border px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-slate-300">
           {entry.amount >= 0 ? `+${entry.amount}` : entry.amount} XP
         </span>
       </div>
@@ -575,7 +575,7 @@ function QuestRewardCard({ quest }: { quest: CampaignQuest }) {
   const rewards = extractRewards(quest.progress);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-2xl border border-tavern-border bg-white/[0.03] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-white">{quest.title}</p>
@@ -689,7 +689,7 @@ function getStatusEffectClass(effectType: CharacterStatusEffect["effect_type"]) 
     case "condition":
       return "border-amber-400/20 bg-amber-400/10 text-amber-100";
     default:
-      return "border-cyan-400/20 bg-cyan-400/10 text-cyan-100";
+      return "border-[#ab211f]/30 bg-[#8f1917]/10 text-[#d5b45d]";
   }
 }
 

@@ -55,7 +55,7 @@ export const WorldArchivePage = () => {
                             <Globe className="w-8 h-8 text-red-500" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-white tracking-tight">World Archive</h1>
+                            <h1 className="text-3xl font-bold text-[#f5efe2] tracking-tight">World Archive</h1>
                             <p className="text-zinc-400 mt-1">Lore, Factions, and Timeline for {currentCampaign?.name}</p>
                         </div>
                     </div>
@@ -102,7 +102,7 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick:
     <button
         onClick={onClick}
         className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors font-mono text-sm whitespace-nowrap ${
-            active ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
+            active ? 'bg-zinc-800 text-[#f5efe2]' : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
         }`}
     >
         {icon}
