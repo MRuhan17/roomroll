@@ -7,6 +7,14 @@ import { createLogger } from '../lib/logger';
 console.log('[DB] DOTENV CONFIG...');
 dotenv.config();
 
+// Clean environment variables of trailing backticks, quotes, and spaces from shell copy-pasts
+for (const key in process.env) {
+    const val = process.env[key];
+    if (typeof val === 'string') {
+        process.env[key] = val.trim().replace(/^[`'"]|[`'"]$/g, '').trim();
+    }
+}
+
 const logger = createLogger('database');
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

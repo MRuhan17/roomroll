@@ -146,7 +146,6 @@ export const createFaction = async (req: Request, res: Response): Promise<void> 
                 campaign_id: campaignId, 
                 name, 
                 description, 
-                is_secret: is_secret ?? false, 
                 is_discovered: is_discovered ?? true 
             }])
             .select()

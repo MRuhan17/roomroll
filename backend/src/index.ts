@@ -20,7 +20,7 @@ process.on('uncaughtException', (error) => {
 
 const httpServer = createServer(app);
 
-const port = Number(process.env.PORT) || 8080;
+const port = Number(process.env.PORT) || 5000;
 
 // Log environment and port
 console.log(`[SERVER] Starting in ${process.env.NODE_ENV || 'development'} mode`);

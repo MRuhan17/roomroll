@@ -29,7 +29,7 @@ const campaignLimiter = rateLimit({
     limit: 60,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => `campaign:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
+    keyGenerator: (req: any) => `campaign:${req.user?.id ?? ipKeyGenerator(req.ip ?? '')}`,
     message: { message: 'Too many requests' }
 });
 

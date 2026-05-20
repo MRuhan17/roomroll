@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios";
 
-const baseURL = import.meta.env.NEXT_PUBLIC_API_URL;
+const baseURL = import.meta.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const TOKEN_KEY = "roomroll_token";
 
 export const api = axios.create({
