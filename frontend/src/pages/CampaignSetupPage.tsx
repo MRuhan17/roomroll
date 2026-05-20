@@ -39,6 +39,20 @@ export default function CampaignSetupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Progressive forging steps
+  const [forgeSteps, setForgeSteps] = useState<Record<string, 'pending' | 'saving' | 'success' | 'failed'>>({
+    foundations: 'pending',
+    map: 'pending',
+    lore: 'pending',
+    faction: 'pending'
+  });
+  const [stepErrors, setStepErrors] = useState<Record<string, string | null>>({
+    foundations: null,
+    map: null,
+    lore: null,
+    faction: null
+  });
+
   // Reforge session states
   const [showReforgeModal, setShowReforgeModal] = useState(false);
   const [reforgePassword, setReforgePassword] = useState("");
@@ -62,38 +76,93 @@ export default function CampaignSetupPage() {
     if (!campaignId) return;
     setLoading(true);
     setError(null);
+    const cid = parseInt(campaignId);
 
     try {
-      const cid = parseInt(campaignId);
-      
-      // Update basic details
+      // Step 1: Foundations
       if (description || worldType) {
-        await updateCampaign(cid, description, worldType);
+        if (forgeSteps.foundations !== 'success') {
+          setForgeSteps(prev => ({ ...prev, foundations: 'saving' }));
+          setStepErrors(prev => ({ ...prev, foundations: null }));
+          try {
+            await updateCampaign(cid, description, worldType);
+            setForgeSteps(prev => ({ ...prev, foundations: 'success' }));
+          } catch (err: any) {
+            const msg = getApiErrorMessage(err, "Failed to update foundations.");
+            setForgeSteps(prev => ({ ...prev, foundations: 'failed' }));
+            setStepErrors(prev => ({ ...prev, foundations: msg }));
+            throw err;
+          }
+        }
+      } else {
+        setForgeSteps(prev => ({ ...prev, foundations: 'success' }));
       }
 
-      // Upload Map if provided
+      // Step 2: Cartography Map Scroll
       if (imageBase64 && mapName) {
-        await createMap(cid, mapName, imageBase64, true, 50);
+        if (forgeSteps.map !== 'success') {
+          setForgeSteps(prev => ({ ...prev, map: 'saving' }));
+          setStepErrors(prev => ({ ...prev, map: null }));
+          try {
+            await createMap(cid, mapName, imageBase64, true, 50);
+            setForgeSteps(prev => ({ ...prev, map: 'success' }));
+          } catch (err: any) {
+            const msg = getApiErrorMessage(err, "Failed to upload map scroll.");
+            setForgeSteps(prev => ({ ...prev, map: 'failed' }));
+            setStepErrors(prev => ({ ...prev, map: msg }));
+            throw err;
+          }
+        }
+      } else {
+        setForgeSteps(prev => ({ ...prev, map: 'success' }));
       }
 
-      // Create lore if provided
+      // Step 3: Primary Lore Chronicle
       if (loreTitle && loreContent) {
-        await createLore(cid, loreTitle, "General", loreContent);
+        if (forgeSteps.lore !== 'success') {
+          setForgeSteps(prev => ({ ...prev, lore: 'saving' }));
+          setStepErrors(prev => ({ ...prev, lore: null }));
+          try {
+            await createLore(cid, loreTitle, "General", loreContent);
+            setForgeSteps(prev => ({ ...prev, lore: 'success' }));
+          } catch (err: any) {
+            const msg = getApiErrorMessage(err, "Failed to record lore chronicle.");
+            setForgeSteps(prev => ({ ...prev, lore: 'failed' }));
+            setStepErrors(prev => ({ ...prev, lore: msg }));
+            throw err;
+          }
+        }
+      } else {
+        setForgeSteps(prev => ({ ...prev, lore: 'success' }));
       }
 
-      // Create faction if provided
+      // Step 4: Ruling Alliance Factions
       if (factionName && factionDesc) {
-        await createFaction(cid, factionName, factionDesc);
+        if (forgeSteps.faction !== 'success') {
+          setForgeSteps(prev => ({ ...prev, faction: 'saving' }));
+          setStepErrors(prev => ({ ...prev, faction: null }));
+          try {
+            await createFaction(cid, factionName, factionDesc);
+            setForgeSteps(prev => ({ ...prev, faction: 'success' }));
+          } catch (err: any) {
+            const msg = getApiErrorMessage(err, "Failed to establish alliance factions.");
+            setForgeSteps(prev => ({ ...prev, faction: 'failed' }));
+            setStepErrors(prev => ({ ...prev, faction: msg }));
+            throw err;
+          }
+        }
+      } else {
+        setForgeSteps(prev => ({ ...prev, faction: 'success' }));
       }
 
-      navigate(`/campaign/${cid}`); // Go to session
+      navigate(`/campaign/${cid}`); // Go to session dashboard
     } catch (err: any) {
       const msg = getApiErrorMessage(err, "Failed to setup campaign.");
       if (msg.toLowerCase().includes("invalid or expired token") || msg.toLowerCase().includes("unauthorized")) {
         setError("Your connection to the world archive has faded. Whisper your password to re-forge the connection and save your configurations.");
         setShowReforgeModal(true);
       } else {
-        setError(msg);
+        setError("Chronicle Forging was interrupted. Please review the highlighted stage errors below and try again.");
       }
     } finally {
       setLoading(false);
@@ -145,7 +214,7 @@ export default function CampaignSetupPage() {
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-[#ab211f]/10 border border-[#ab211f]/30 text-[#f4efe3] rounded-lg text-xs leading-relaxed text-center font-display uppercase tracking-wider animate-pulse"
+            className="p-4 bg-[#ab211f]/10 border border-[#ab211f]/30 text-[#f4efe3] rounded-lg text-xs leading-relaxed text-center font-display uppercase tracking-wider animate-pulse animate-duration-1000"
           >
             {error}
           </motion.div>
@@ -304,6 +373,102 @@ export default function CampaignSetupPage() {
             </div>
           </SurfaceCard>
         </div>
+
+        {/* Real-time Progressive Forging Log */}
+        {(loading || Object.values(forgeSteps).some(s => s !== 'pending')) && (
+          <SurfaceCard className="p-6 border-[#d5b45d]/20 bg-black/40 space-y-4">
+            <h3 className="font-display text-xs uppercase tracking-widest text-[#d5b45d] flex items-center gap-2 border-b border-[#211d15] pb-2">
+              <Compass className="h-4 w-4 animate-spin-slow text-[#d5b45d]" /> Chronicle Forging Logs
+            </h3>
+            <div className="grid gap-3 text-xs">
+              {/* Foundations Step */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded bg-black/30 border border-[#211d15] gap-2">
+                <div className="space-y-1">
+                  <div className="font-display uppercase tracking-wider flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${forgeSteps.foundations === 'success' ? 'bg-green-400' : forgeSteps.foundations === 'failed' ? 'bg-red-400' : 'bg-[#d5b45d]'}`} />
+                    World Foundations
+                  </div>
+                  {stepErrors.foundations && (
+                    <p className="text-[10px] text-red-400 font-sans pl-3.5 leading-relaxed">{stepErrors.foundations}</p>
+                  )}
+                </div>
+                <span className={`text-[10px] uppercase font-display tracking-widest px-2.5 py-0.5 rounded self-start sm:self-center ${
+                  forgeSteps.foundations === 'success' ? 'bg-green-500/10 text-green-400' :
+                  forgeSteps.foundations === 'failed' ? 'bg-red-500/10 text-red-400 animate-pulse' :
+                  forgeSteps.foundations === 'saving' ? 'bg-[#d5b45d]/10 text-[#d5b45d] animate-pulse' : 'text-neutral-500 bg-neutral-900/40'
+                }`}>
+                  {forgeSteps.foundations}
+                </span>
+              </div>
+
+              {/* Map Step */}
+              {(imageBase64 && mapName) && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded bg-black/30 border border-[#211d15] gap-2">
+                  <div className="space-y-1">
+                    <div className="font-display uppercase tracking-wider flex items-center gap-2">
+                      <span className={`h-1.5 w-1.5 rounded-full ${forgeSteps.map === 'success' ? 'bg-green-400' : forgeSteps.map === 'failed' ? 'bg-red-400' : 'bg-[#d5b45d]'}`} />
+                      Ancient Cartography Map
+                    </div>
+                    {stepErrors.map && (
+                      <p className="text-[10px] text-red-400 font-sans pl-3.5 leading-relaxed">{stepErrors.map}</p>
+                    )}
+                  </div>
+                  <span className={`text-[10px] uppercase font-display tracking-widest px-2.5 py-0.5 rounded self-start sm:self-center ${
+                    forgeSteps.map === 'success' ? 'bg-green-500/10 text-green-400' :
+                    forgeSteps.map === 'failed' ? 'bg-red-500/10 text-red-400 animate-pulse' :
+                    forgeSteps.map === 'saving' ? 'bg-[#d5b45d]/10 text-[#d5b45d] animate-pulse' : 'text-neutral-500 bg-neutral-900/40'
+                  }`}>
+                    {forgeSteps.map}
+                  </span>
+                </div>
+              )}
+
+              {/* Lore Step */}
+              {(loreTitle && loreContent) && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded bg-black/30 border border-[#211d15] gap-2">
+                  <div className="space-y-1">
+                    <div className="font-display uppercase tracking-wider flex items-center gap-2">
+                      <span className={`h-1.5 w-1.5 rounded-full ${forgeSteps.lore === 'success' ? 'bg-green-400' : forgeSteps.lore === 'failed' ? 'bg-red-400' : 'bg-[#d5b45d]'}`} />
+                      Primary History Lore
+                    </div>
+                    {stepErrors.lore && (
+                      <p className="text-[10px] text-red-400 font-sans pl-3.5 leading-relaxed">{stepErrors.lore}</p>
+                    )}
+                  </div>
+                  <span className={`text-[10px] uppercase font-display tracking-widest px-2.5 py-0.5 rounded self-start sm:self-center ${
+                    forgeSteps.lore === 'success' ? 'bg-green-500/10 text-green-400' :
+                    forgeSteps.lore === 'failed' ? 'bg-red-500/10 text-red-400 animate-pulse' :
+                    forgeSteps.lore === 'saving' ? 'bg-[#d5b45d]/10 text-[#d5b45d] animate-pulse' : 'text-neutral-500 bg-neutral-900/40'
+                  }`}>
+                    {forgeSteps.lore}
+                  </span>
+                </div>
+              )}
+
+              {/* Factions Step */}
+              {(factionName && factionDesc) && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded bg-black/30 border border-[#211d15] gap-2">
+                  <div className="space-y-1">
+                    <div className="font-display uppercase tracking-wider flex items-center gap-2">
+                      <span className={`h-1.5 w-1.5 rounded-full ${forgeSteps.faction === 'success' ? 'bg-green-400' : forgeSteps.faction === 'failed' ? 'bg-red-400' : 'bg-[#d5b45d]'}`} />
+                      Ruling Faction Alliance
+                    </div>
+                    {stepErrors.faction && (
+                      <p className="text-[10px] text-red-400 font-sans pl-3.5 leading-relaxed">{stepErrors.faction}</p>
+                    )}
+                  </div>
+                  <span className={`text-[10px] uppercase font-display tracking-widest px-2.5 py-0.5 rounded self-start sm:self-center ${
+                    forgeSteps.faction === 'success' ? 'bg-green-500/10 text-green-400' :
+                    forgeSteps.faction === 'failed' ? 'bg-red-500/10 text-red-400 animate-pulse' :
+                    forgeSteps.faction === 'saving' ? 'bg-[#d5b45d]/10 text-[#d5b45d] animate-pulse' : 'text-neutral-500 bg-neutral-900/40'
+                  }`}>
+                    {forgeSteps.faction}
+                  </span>
+                </div>
+              )}
+            </div>
+          </SurfaceCard>
+        )}
 
         {/* Buttons */}
         <div className="pt-6 border-t border-[#211d15] flex flex-col sm:flex-row justify-end gap-4">
