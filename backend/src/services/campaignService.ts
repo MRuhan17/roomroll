@@ -62,7 +62,7 @@ export const createCampaign = async (input: CreateCampaignInput): Promise<Campai
                 {
                     campaign_id: data.id,
                     user_id: input.dmUserId,
-                    role: input.playMode === 'human_dm' ? 'DM' : 'player'
+                    role: 'DM'
                 }
             ]);
             if (memberError) {
@@ -100,16 +100,34 @@ export const getCampaignByInviteCode = async (inviteCode: string): Promise<Campa
 };
 
 export const getMember = async (campaignId: number, userId: number): Promise<CampaignMember | null> => {
-    const { data, error } = await supabase
+    const { data: member, error } = await supabase
         .from('campaign_members')
         .select('*')
         .eq('campaign_id', campaignId)
         .eq('user_id', userId)
         .maybeSingle();
-    if (error || !data) {
+
+    // Check if the user is the campaign creator/DM
+    const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('dm_user_id')
+        .eq('id', campaignId)
+        .maybeSingle();
+
+    if (campaign && campaign.dm_user_id === userId) {
+        return {
+            id: member?.id ?? 0,
+            campaign_id: campaignId,
+            user_id: userId,
+            role: 'DM',
+            joined_at: member?.joined_at ?? new Date().toISOString()
+        } as CampaignMember;
+    }
+
+    if (error || !member) {
         return null;
     }
-    return data as CampaignMember;
+    return member as CampaignMember;
 };
 
 export const listMembers = async (campaignId: number): Promise<CampaignMember[]> => {
