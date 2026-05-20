@@ -30,6 +30,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCampaign, joinCampaign } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
+import { login } from "@/services/auth";
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -42,6 +43,13 @@ export function OnboardingPage() {
   const [playMode, setPlayMode] = useState<"human_dm" | "player_only" | "ai_dm">("human_dm");
   const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Reforge session states
+  const [showReforgeModal, setShowReforgeModal] = useState(false);
+  const [reforgePassword, setReforgePassword] = useState("");
+  const [reforgeError, setReforgeError] = useState<string | null>(null);
+  const [isReforging, setIsReforging] = useState(false);
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   // Storyteller parameters
   const [genre, setGenre] = useState("High Fantasy");
@@ -60,6 +68,48 @@ export function OnboardingPage() {
   const [targetSessions, setTargetSessions] = useState<number>(5);
   const [customSessions, setCustomSessions] = useState<string>("");
   const [pacingIntensity, setPacingIntensity] = useState<'auto' | 'slow' | 'balanced' | 'fast'>("balanced");
+
+  const handleReforgeSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email || !reforgePassword) return;
+    setIsReforging(true);
+    setReforgeError(null);
+    try {
+      const response = await login({ email: user.email, password: reforgePassword });
+      setAuth(response.user, response.token);
+      setShowReforgeModal(false);
+      setReforgePassword("");
+      setError(null);
+      
+      // Auto-retry forging!
+      if (step === "create") {
+        createMutation.mutate({ 
+          name: createName, 
+          worldType: createWorld || genre, 
+          playMode,
+          genre,
+          tone,
+          storyFootnotes,
+          guidance: {
+            important_locations: locations,
+            forbidden_lore: forbiddenLore,
+            campaign_objectives: objectives,
+            recurring_villains: villains,
+            faction_conflicts: conflicts,
+            emotional_themes: themes
+          },
+          targetSessions,
+          pacingIntensity
+        });
+      } else if (step === "join" && joinCode) {
+        joinMutation.mutate(joinCode);
+      }
+    } catch (err) {
+      setReforgeError(getApiErrorMessage(err, "Verification failed. Try again."));
+    } finally {
+      setIsReforging(false);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: (data: { 
@@ -96,7 +146,15 @@ export function OnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
       navigate(`/campaigns/${data.campaign.id}/setup`);
     },
-    onError: (err) => setError(getApiErrorMessage(err, "Could not forge world.")),
+    onError: (err) => {
+      const msg = getApiErrorMessage(err, "Could not forge world.");
+      if (msg.toLowerCase().includes("invalid or expired token") || msg.toLowerCase().includes("unauthorized")) {
+        setError("The connection to the world archive was lost. Reforging your session...");
+        setShowReforgeModal(true);
+      } else {
+        setError(msg);
+      }
+    },
   });
 
   const joinMutation = useMutation({
@@ -105,7 +163,15 @@ export function OnboardingPage() {
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
       navigate(`/campaigns`);
     },
-    onError: (err) => setError(getApiErrorMessage(err, "Could not find campaign.")),
+    onError: (err) => {
+      const msg = getApiErrorMessage(err, "Could not find campaign.");
+      if (msg.toLowerCase().includes("invalid or expired token") || msg.toLowerCase().includes("unauthorized")) {
+        setError("The connection to the world archive was lost. Reforging your session...");
+        setShowReforgeModal(true);
+      } else {
+        setError(msg);
+      }
+    },
   });
 
   return (
@@ -754,6 +820,78 @@ export function OnboardingPage() {
               </form>
             </SurfaceCard>
           </motion.div>
+        )}
+
+        {/* Immersive Reforge Session Modal */}
+        {showReforgeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="relative w-full max-w-md border border-[#d5b45d]/30 bg-[#0a0806]/95 p-8 rounded-lg shadow-[0_0_50px_rgba(213,180,93,0.15)] space-y-6"
+            >
+              {/* Header */}
+              <div className="text-center space-y-2">
+                <div className="flex justify-center mb-2">
+                  <ShieldAlert className="h-10 w-10 text-[#ab211f] animate-pulse" />
+                </div>
+                <h3 className="font-display text-2xl uppercase tracking-widest text-[#f4efe3]">
+                  Connection Severed
+                </h3>
+                <p className="text-[10px] text-[#cbc3b5]/70 italic leading-relaxed">
+                  "Your link to the world archive has faded. Whisper your password to re-forge the connection and save your configurations."
+                </p>
+              </div>
+
+              <form onSubmit={handleReforgeSession} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[9px] uppercase tracking-[0.2em] text-[#d5b45d]">Active Traveler</Label>
+                  <div className="p-3 bg-black/40 border border-[#2d281e] rounded-lg text-xs text-[#cbc3b5] font-mono select-none overflow-hidden text-ellipsis">
+                    {user?.email}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[9px] uppercase tracking-[0.2em] text-[#d5b45d]">Verify Password</Label>
+                  <Input
+                    type="password"
+                    required
+                    placeholder="Enter password..."
+                    className="bg-black/60 border-[#2d281e] h-12 focus:border-[#d5b45d]/50 focus:ring-1 focus:ring-[#d5b45d]/20 text-[#f4efe3]"
+                    value={reforgePassword}
+                    onChange={(e) => setReforgePassword(e.target.value)}
+                  />
+                </div>
+
+                {reforgeError && (
+                  <p className="text-red-400 text-[10px] text-center font-display uppercase tracking-wider">
+                    {reforgeError}
+                  </p>
+                )}
+
+                <div className="pt-2 flex flex-col gap-2">
+                  <Button
+                    type="submit"
+                    className="h-12 bg-[linear-gradient(180deg,_#d5b45d,_#a28135)] hover:opacity-90 text-black font-display uppercase tracking-wider text-xs font-semibold"
+                    disabled={isReforging}
+                  >
+                    {isReforging ? "Reforging..." : "Reforge Connection"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReforgeModal(false);
+                      setReforgePassword("");
+                      setReforgeError(null);
+                    }}
+                    className="text-[9px] uppercase tracking-[0.2em] text-[#cbc3b5]/40 hover:text-white transition-colors py-2"
+                  >
+                    Keep Offline Config
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </div>
     </div>
