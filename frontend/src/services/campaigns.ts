@@ -77,12 +77,12 @@ export async function createMap(campaignId: number, name: string, imageBase64: s
 }
 
 export async function createLore(campaignId: number, title: string, category: string, content: string) {
-  const res = await api.post(`/api/campaigns/${campaignId}/lore`, { title, category, content });
+  const res = await api.post(`/api/campaigns/${campaignId}/world/lore`, { title, category, content });
   return res.data;
 }
 
 export async function createFaction(campaignId: number, name: string, description: string, baseLocation?: string) {
-  const res = await api.post(`/api/campaigns/${campaignId}/factions`, { name, description, baseLocation });
+  const res = await api.post(`/api/campaigns/${campaignId}/world/factions`, { name, description, baseLocation });
   return res.data;
 }
 

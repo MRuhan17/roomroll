@@ -2,12 +2,25 @@ import { Request, Response } from 'express';
 import { supabase } from '../config/db';
 import { createLogger } from '../lib/logger';
 import { broadcastToRoom } from '../realtime/roomState';
+import { getMember } from '../services/campaignService';
 
 const logger = createLogger('loreController');
 
 export const getWorldData = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id as string;
+        const campaignId = Number(req.params.id);
+        const user = req.user;
+
+        if (!user) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        const member = await getMember(campaignId, user.id);
+        if (!member) {
+            res.status(403).json({ message: 'Access denied: Not a member of this campaign' });
+            return;
+        }
 
         // Fetch lore
         const { data: lore, error: loreError } = await supabase
@@ -56,20 +69,45 @@ export const getWorldData = async (req: Request, res: Response): Promise<void> =
 
 export const createLoreEntry = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id as string;
+        const campaignId = Number(req.params.id);
+        const user = req.user;
+
+        if (!user) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        const member = await getMember(campaignId, user.id);
+        if (!member || member.role !== 'DM') {
+            res.status(403).json({ message: 'DM role required' });
+            return;
+        }
+
         const { title, category, content, is_secret, is_discovered } = req.body;
+
+        if (!title || !content) {
+            res.status(400).json({ message: 'Title and content are required' });
+            return;
+        }
 
         const { data, error } = await supabase
             .from('campaign_lore_entries')
-            .insert([{ campaign_id: campaignId, title, category, content, is_secret, is_discovered }])
+            .insert([{ 
+                campaign_id: campaignId, 
+                title, 
+                category: category || 'General', 
+                content, 
+                is_secret: is_secret ?? false, 
+                is_discovered: is_discovered ?? true 
+            }])
             .select()
             .single();
 
         if (error) throw error;
         
         // If it starts discovered, notify players in room (if active)
-        if (is_discovered) {
-            broadcastToRoom(campaignId, 'lore_discovered', { lore: data });
+        if (data.is_discovered) {
+            broadcastToRoom(String(campaignId), 'lore_discovered', { lore: data });
         }
 
         res.status(201).json(data);
@@ -81,19 +119,43 @@ export const createLoreEntry = async (req: Request, res: Response): Promise<void
 
 export const createFaction = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id as string;
+        const campaignId = Number(req.params.id);
+        const user = req.user;
+
+        if (!user) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        const member = await getMember(campaignId, user.id);
+        if (!member || member.role !== 'DM') {
+            res.status(403).json({ message: 'DM role required' });
+            return;
+        }
+
         const { name, description, is_secret, is_discovered } = req.body;
+
+        if (!name || !description) {
+            res.status(400).json({ message: 'Name and description are required' });
+            return;
+        }
 
         const { data, error } = await supabase
             .from('campaign_factions')
-            .insert([{ campaign_id: campaignId, name, description, is_secret, is_discovered }])
+            .insert([{ 
+                campaign_id: campaignId, 
+                name, 
+                description, 
+                is_secret: is_secret ?? false, 
+                is_discovered: is_discovered ?? true 
+            }])
             .select()
             .single();
 
         if (error) throw error;
         
-        if (is_discovered) {
-            broadcastToRoom(campaignId, 'faction_discovered', { faction: data });
+        if (data.is_discovered) {
+            broadcastToRoom(String(campaignId), 'faction_discovered', { faction: data });
         }
 
         res.status(201).json(data);
@@ -105,9 +167,27 @@ export const createFaction = async (req: Request, res: Response): Promise<void> 
 
 export const discoverEntity = async (req: Request, res: Response): Promise<void> => {
     try {
-        const campaignId = req.params.id as string;
+        const campaignId = Number(req.params.id);
+        const user = req.user;
+
+        if (!user) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        const member = await getMember(campaignId, user.id);
+        if (!member || member.role !== 'DM') {
+            res.status(403).json({ message: 'DM role required' });
+            return;
+        }
+
         const { entity_type, entity_id } = req.body;
-        const userId = req.user?.id; // Assuming auth middleware sets req.user
+        const userId = user.id;
+
+        if (!entity_type || !entity_id) {
+            res.status(400).json({ message: 'Entity type and ID are required' });
+            return;
+        }
 
         // Mark as discovered based on type
         if (entity_type === 'lore') {
@@ -126,7 +206,7 @@ export const discoverEntity = async (req: Request, res: Response): Promise<void>
         if (error) throw error;
 
         // Broadcast to clients
-        broadcastToRoom(campaignId, 'entity_discovered', { discovery: data, entity_type, entity_id });
+        broadcastToRoom(String(campaignId), 'entity_discovered', { discovery: data, entity_type, entity_id });
 
         res.status(201).json(data);
     } catch (error) {
