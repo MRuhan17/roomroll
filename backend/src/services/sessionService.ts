@@ -18,8 +18,16 @@ export const getActiveSessionId = async (campaignId: number): Promise<string | u
 };
 
 export const startSession = async (campaignId: number, startedBy: number): Promise<CampaignSessionState> => {
+    const { data: campaignData } = await supabase
+        .from('campaigns')
+        .select('current_session_state')
+        .eq('id', campaignId)
+        .single();
+
+    const existingState = campaignData?.current_session_state as any || {};
     const sessionId = randomUUID();
     const state: CampaignSessionState = {
+        ...existingState,
         status: 'active',
         started_at: new Date().toISOString(),
         mode: 'narration',
@@ -51,10 +59,14 @@ export const endSession = async (
 
     const activeSessionState = campaignData?.current_session_state as CampaignSessionState | null;
     const activeSessionId = activeSessionState?.session_id;
+    const existingState = campaignData?.current_session_state as any || {};
+    const currentCompleted = Number(existingState.completed_sessions) || 0;
 
     const state: CampaignSessionState = {
+        ...existingState,
         status: 'ended',
-        ended_at: new Date().toISOString()
+        ended_at: new Date().toISOString(),
+        completed_sessions: currentCompleted + 1
     };
 
     const { error } = await supabase

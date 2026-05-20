@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { register } from "@/services/auth";
 import { getApiErrorMessage } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
+import { BrandMark } from "@/components/landing/LandingPrimitives";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -37,11 +38,9 @@ export function RegisterPage() {
   return (
     <AuthShell>
       <Card className="w-full max-w-md border-primary/20 bg-card/95 glass-panel text-center">
-        <CardHeader className="space-y-4 pb-8">
-          <CardTitle className="font-serif text-4xl text-primary font-normal tracking-wide">
-            RoomRoll
-          </CardTitle>
-          <p className="text-lg text-foreground font-serif tracking-wide">
+        <CardHeader className="space-y-4 pb-8 flex flex-col items-center">
+          <BrandMark />
+          <p className="text-lg text-foreground font-serif tracking-wide mt-2">
             Forge Your Destiny
           </p>
           <p className="text-sm text-muted-foreground">

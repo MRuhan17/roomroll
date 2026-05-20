@@ -23,11 +23,9 @@ export function AppLayout() {
         <aside className="tavern-card border-b border-tavern-border p-6 lg:border-b-0 lg:border-r relative overflow-hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-xl z-[-1]" />
           
-          <Link to="/rooms" className="inline-flex items-center gap-3">
-            <Flame className="h-6 w-6 text-[#ab211f]" />
-            <h1 className="text-2xl font-display font-bold uppercase tracking-widest text-[#f5efe2]">Roomroll</h1>
+          <Link to="/campaigns" className="block hover:opacity-90 transition-opacity">
+            <BrandMark />
           </Link>
-          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[#d5b45d]/70">The Digital Tavern</p>
 
           <nav className="mt-12 space-y-3">
             <NavLink

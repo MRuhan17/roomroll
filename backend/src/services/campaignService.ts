@@ -7,6 +7,21 @@ export interface CreateCampaignInput {
     description?: string;
     worldType?: string;
     dmUserId: number;
+    playMode?: 'human_dm' | 'player_only' | 'ai_dm';
+    genre?: string;
+    tone?: string;
+    storyFootnotes?: string;
+    guidance?: {
+        important_locations?: string;
+        forbidden_lore?: string;
+        campaign_objectives?: string;
+        recurring_villains?: string;
+        faction_conflicts?: string;
+        emotional_themes?: string;
+    };
+    targetSessions?: number;
+    pacingIntensity?: 'auto' | 'slow' | 'balanced' | 'fast';
+    criticalArcs?: string[];
 }
 
 const MAX_INVITE_CODE_COLLISION_RETRIES = 5;
@@ -24,7 +39,19 @@ export const createCampaign = async (input: CreateCampaignInput): Promise<Campai
                     world_type: input.worldType || null,
                     dm_user_id: input.dmUserId,
                     invite_code: inviteCode,
-                    current_session_state: { status: 'idle', mode: 'narration' }
+                    current_session_state: { 
+                        status: 'idle', 
+                        mode: 'narration',
+                        play_mode: input.playMode || 'human_dm',
+                        genre: input.genre || 'High Fantasy',
+                        tone: input.tone || 'cinematic',
+                        story_footnotes: input.storyFootnotes || '',
+                        guidance: input.guidance || {},
+                        target_sessions: input.targetSessions || 5,
+                        completed_sessions: 0,
+                        pacing_intensity: input.pacingIntensity || 'balanced',
+                        critical_arcs: input.criticalArcs || []
+                    }
                 }
             ])
             .select('*')
@@ -35,7 +62,7 @@ export const createCampaign = async (input: CreateCampaignInput): Promise<Campai
                 {
                     campaign_id: data.id,
                     user_id: input.dmUserId,
-                    role: 'DM'
+                    role: input.playMode === 'human_dm' ? 'DM' : 'player'
                 }
             ]);
             if (memberError) {

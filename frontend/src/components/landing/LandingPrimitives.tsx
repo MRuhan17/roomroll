@@ -6,6 +6,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
+import logoImg from "@/assets/logo.png";
 
 const emberSeeds = [
   { left: "4%", top: "76%", delay: "0s", duration: "10s" },
@@ -82,22 +83,40 @@ export function Embers({ className }: { className?: string }) {
 }
 
 export function BrandMark({ compact = false }: { compact?: boolean }) {
-  const logoSize = compact
-    ? { width: 128, height: 32 }
-    : { width: 192, height: 48 };
-
   return (
-    <div className="flex items-center">
-      <img
-        src={roomrollLogoUrl}
-        alt="Roomroll"
-        width={logoSize.width}
-        height={logoSize.height}
-        className="block"
-      />
+    <div className="flex items-center gap-3 select-none group">
+      {/* Mystical Glowing Runic Sigil / Flame Shield */}
+      <div className={cn(
+        "relative flex items-center justify-center rounded-full bg-black/45 border border-[#d5b45d]/40 shadow-[0_0_15px_rgba(171,33,31,0.4)] transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(213,180,93,0.6)] overflow-hidden",
+        compact ? "h-10 w-10" : "h-14 w-14"
+      )}>
+        <img
+          src={logoImg}
+          alt="RoomRoll Logo"
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:rotate-[15deg]"
+        />
+        {/* Magic aura pulsing in ambient mode */}
+        <span className="absolute inset-0 rounded-full bg-[#ab211f]/15 blur-sm scale-110 animate-pulse pointer-events-none" />
+      </div>
+
+      {/* Styled Medieval Title Text */}
+      <div className="flex flex-col">
+        <span className={cn(
+          "font-display font-bold uppercase tracking-[0.22em] bg-gradient-to-r from-[#f5efe2] via-[#e8dfc7] to-[#d5b45d] bg-clip-text text-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]",
+          compact ? "text-lg" : "text-2xl"
+        )}>
+          Roomroll
+        </span>
+        {!compact && (
+          <span className="text-[9px] uppercase tracking-[0.34em] text-[#d5b45d]/80 font-semibold -mt-1.5 drop-shadow">
+            Digital Tavern
+          </span>
+        )}
+      </div>
     </div>
   );
 }
+
 
 export function SectionEyebrow({
   children,

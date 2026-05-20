@@ -17,6 +17,22 @@ export interface CampaignSessionState {
   mode?: CampaignMode;
   active_scene?: string;
   session_id?: string;
+  play_mode?: 'human_dm' | 'player_only' | 'ai_dm';
+  genre?: string;
+  tone?: string;
+  story_footnotes?: string;
+  target_sessions?: number;
+  completed_sessions?: number;
+  pacing_intensity?: 'auto' | 'slow' | 'balanced' | 'fast';
+  critical_arcs?: string[];
+  guidance?: {
+    important_locations?: string;
+    forbidden_lore?: string;
+    campaign_objectives?: string;
+    recurring_villains?: string;
+    faction_conflicts?: string;
+    emotional_themes?: string;
+  };
 }
 
 export interface Campaign {

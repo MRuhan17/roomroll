@@ -10,7 +10,9 @@ import { LandingPage } from "@/pages/LandingPage";
 import { OnboardingPage } from "@/pages/OnboardingPage";
 import { CharacterSheetPage } from "@/pages/CharacterSheetPage";
 import { WorldArchivePage } from "@/pages/WorldArchivePage";
+import { SessionRecapsPage } from "@/pages/SessionRecapsPage";
 import CampaignSetupPage from "@/pages/CampaignSetupPage";
+import { TavernPage } from "@/pages/TavernPage";
 
 export default function App() {
   return (
@@ -38,6 +40,8 @@ export default function App() {
           <Route index element={<CampaignDashboardPage />} />
           <Route path=":campaignId/setup" element={<CampaignSetupPage />} />
           <Route path=":campaignId/archive" element={<WorldArchivePage />} />
+          <Route path=":campaignId/recaps" element={<SessionRecapsPage />} />
+          <Route path=":campaignId/tavern" element={<TavernPage />} />
           <Route path=":campaignId/characters/:characterId" element={<CharacterSheetPage />} />
         </Route>
         <Route

@@ -17,6 +17,41 @@ export interface CampaignSessionState {
     mode?: 'narration' | 'tactical';
     active_scene?: string;
     session_id?: string;
+    play_mode?: 'human_dm' | 'player_only' | 'ai_dm';
+    genre?: string;
+    tone?: string;
+    story_footnotes?: string;
+    guidance?: {
+        important_locations?: string;
+        forbidden_lore?: string;
+        campaign_objectives?: string;
+        recurring_villains?: string;
+        faction_conflicts?: string;
+        emotional_themes?: string;
+    };
+    target_sessions?: number;
+    completed_sessions?: number;
+    pacing_intensity?: 'auto' | 'slow' | 'balanced' | 'fast';
+    critical_arcs?: string[];
+    future_story_points?: Array<{
+        id: number;
+        title: string;
+        description: string;
+        branch_type: string;
+        pacing_recommendation?: string;
+        emotional_moment?: string;
+        combat_opportunity?: string;
+        player_decision_prediction?: string;
+        backup_scenario?: string;
+        possible_encounters?: string;
+        faction_reactions?: string;
+        character_consequences?: string;
+        plot_twists?: string;
+        npc_betrayals?: string;
+        lore_discoveries?: string;
+        is_locked?: boolean;
+        is_rejected?: boolean;
+    }>;
 }
 
 export interface CampaignMember {
