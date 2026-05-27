@@ -225,7 +225,7 @@ export function OnboardingPage() {
             
             <Reveal delay={0.3}>
                 <button 
-                    onClick={() => navigate('/campaigns')}
+                    onClick={() => { if (!user) navigate('/login'); else navigate('/campaigns'); }}
                     className="text-[0.7rem] uppercase tracking-[0.4em] text-[#8e8778] hover:text-[#f4efe3] transition-colors"
                 >
                     Back to Dashboard

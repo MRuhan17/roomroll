@@ -52,6 +52,9 @@ export function createApp() {
     app.use('/api/admin', adminRoutes);
 
     app.use((error: unknown, req: Request, res: Response, _next: unknown) => {
+        if (process.env.NODE_ENV === 'test') {
+            console.error('UNHANDLED TEST ERROR:', error);
+        }
         logger.error('Unhandled application error', {
             method: req.method,
             path: req.originalUrl,

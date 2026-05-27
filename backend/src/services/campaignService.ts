@@ -1,5 +1,5 @@
 import { supabase } from '../config/db';
-import { Campaign, CampaignMember } from '../types/campaign';
+import { Campaign, CampaignParticipant } from '../types/campaign';
 import { generateInviteCode } from '../utils/inviteCode';
 
 export interface CreateCampaignInput {
@@ -58,7 +58,7 @@ export const createCampaign = async (input: CreateCampaignInput): Promise<Campai
             .single();
 
         if (!error && data) {
-            const { error: memberError } = await supabase.from('campaign_members').insert([
+            const { error: memberError } = await supabase.from('campaign_participants').insert([
                 {
                     campaign_id: data.id,
                     user_id: input.dmUserId,
@@ -99,9 +99,9 @@ export const getCampaignByInviteCode = async (inviteCode: string): Promise<Campa
     return data as Campaign;
 };
 
-export const getMember = async (campaignId: number, userId: number): Promise<CampaignMember | null> => {
+export const getMember = async (campaignId: number, userId: number): Promise<CampaignParticipant | null> => {
     const { data: member, error } = await supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .select('*')
         .eq('campaign_id', campaignId)
         .eq('user_id', userId)
@@ -121,30 +121,30 @@ export const getMember = async (campaignId: number, userId: number): Promise<Cam
             user_id: userId,
             role: 'DM',
             joined_at: member?.joined_at ?? new Date().toISOString()
-        } as CampaignMember;
+        } as CampaignParticipant;
     }
 
     if (error || !member) {
         return null;
     }
-    return member as CampaignMember;
+    return member as CampaignParticipant;
 };
 
-export const listMembers = async (campaignId: number): Promise<CampaignMember[]> => {
+export const listMembers = async (campaignId: number): Promise<CampaignParticipant[]> => {
     const { data } = await supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .select('*')
         .eq('campaign_id', campaignId);
-    return (data ?? []) as CampaignMember[];
+    return (data ?? []) as CampaignParticipant[];
 };
 
-export const joinCampaign = async (campaignId: number, userId: number): Promise<CampaignMember> => {
+export const joinCampaign = async (campaignId: number, userId: number): Promise<CampaignParticipant> => {
     const existing = await getMember(campaignId, userId);
     if (existing) {
         return existing;
     }
     const { data, error } = await supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .insert([
             {
                 campaign_id: campaignId,
@@ -157,12 +157,12 @@ export const joinCampaign = async (campaignId: number, userId: number): Promise<
     if (error || !data) {
         throw error ?? new Error('Failed to join campaign');
     }
-    return data as CampaignMember;
+    return data as CampaignParticipant;
 };
 
 export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
     const { data } = await supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .select('campaigns(*)')
         .eq('user_id', userId);
     if (!data) {
@@ -188,7 +188,7 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
 
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
     const { data } = await supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .select('campaigns(*)')
         .eq('user_id', userId)
         .order('joined_at', { ascending: false })

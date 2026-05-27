@@ -27,24 +27,23 @@ describe('character routes', () => {
     beforeEach(() => {
         process.env.JWT_SECRET = 'test-secret';
         jwtMock.verify.mockReturnValue({ id: 42, email: 'dm@example.com' } as never);
+        supabaseFromMock.mockReset();
     });
 
     it('creates a character for a campaign member', async () => {
-        supabaseFromMock
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+        // Table-based dynamic mock router
+        supabaseFromMock.mockImplementation((table: string) => {
+            if (table === 'campaigns') {
+                return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
+            }
+            if (table === 'campaign_members') {
+                return createQueryBuilder({
                     data: { id: 1, campaign_id: 7, user_id: 42, role: 'DM', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
-                    data: { id: 1, campaign_id: 7, user_id: 42, role: 'DM', joined_at: '2026-05-11T00:00:00.000Z' },
-                    error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+                }, 'maybeSingle');
+            }
+            if (table === 'characters') {
+                return createQueryBuilder({
                     data: {
                         id: 101,
                         campaign_id: 7,
@@ -79,61 +78,25 @@ describe('character routes', () => {
                         updated_at: '2026-05-11T00:00:00.000Z',
                     },
                     error: null,
-                }, 'single')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: { id: 900 }, error: null }, 'single')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
-                    data: {
-                        id: 101,
-                        campaign_id: 7,
-                        user_id: 42,
-                        name: 'Aelar',
-                        class_name: 'Ranger',
-                        species: 'Elf',
-                        background: null,
-                        backstory: null,
-                        is_npc: false,
-                        level: 1,
-                        xp: 0,
-                        ability_scores: {
-                            strength: 10,
-                            dexterity: 16,
-                            constitution: 12,
-                            intelligence: 10,
-                            wisdom: 14,
-                            charisma: 10,
-                        },
-                        combat_stats: {
-                            hp_current: 12,
-                            hp_max: 12,
-                            armor_class: 15,
-                            speed: 30,
-                            proficiency_bonus: 2,
-                        },
-                        progression_state: { milestones: [], talents: [], notes: [] },
-                        currency: { gold: 12 },
-                        notes: null,
-                        created_at: '2026-05-11T00:00:00.000Z',
-                        updated_at: '2026-05-11T00:00:00.000Z',
-                    },
-                    error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'limit')
-            );
+                }, 'maybeSingle');
+            }
+            if (table === 'campaign_events') {
+                return createQueryBuilder({ data: { id: 900 }, error: null }, 'single');
+            }
+            if (table === 'inventory_items') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_equipment') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_status_effects') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_progression_log') {
+                return createQueryBuilder({ data: [], error: null }, 'limit');
+            }
+            throw new Error(`Unexpected table query: ${table}`);
+        });
 
         const response = await request(app)
             .post('/api/campaigns/7/characters')
@@ -157,6 +120,7 @@ describe('character routes', () => {
                 },
             });
 
+        console.log('CREATE RESPONSE:', response.body);
         expect(response.status).toBe(201);
         expect(response.body.character).toMatchObject({
             id: 101,
@@ -179,15 +143,18 @@ describe('character routes', () => {
     });
 
     it('lists characters for a campaign member', async () => {
-        supabaseFromMock
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+        supabaseFromMock.mockImplementation((table: string) => {
+            if (table === 'campaigns') {
+                return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
+            }
+            if (table === 'campaign_members') {
+                return createQueryBuilder({
                     data: { id: 2, campaign_id: 7, user_id: 42, role: 'player', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+                }, 'maybeSingle');
+            }
+            if (table === 'characters') {
+                return createQueryBuilder({
                     data: [
                         {
                             id: 101,
@@ -224,10 +191,10 @@ describe('character routes', () => {
                         },
                     ],
                     error: null,
-                }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+                }, 'order');
+            }
+            if (table === 'inventory_items') {
+                return createQueryBuilder({
                     data: [
                         {
                             id: 501,
@@ -247,10 +214,10 @@ describe('character routes', () => {
                         },
                     ],
                     error: null,
-                }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+                }, 'order');
+            }
+            if (table === 'character_equipment') {
+                return createQueryBuilder({
                     data: [
                         {
                             id: 601,
@@ -262,10 +229,10 @@ describe('character routes', () => {
                         },
                     ],
                     error: null,
-                }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+                }, 'order');
+            }
+            if (table === 'character_status_effects') {
+                return createQueryBuilder({
                     data: [
                         {
                             id: 701,
@@ -285,8 +252,13 @@ describe('character routes', () => {
                         },
                     ],
                     error: null,
-                }, 'order')
-            );
+                }, 'order');
+            }
+            if (table === 'character_progression_log') {
+                return createQueryBuilder({ data: [], error: null }, 'limit');
+            }
+            throw new Error(`Unexpected table query: ${table}`);
+        });
 
         const response = await request(app)
             .get('/api/campaigns/7/characters')
@@ -318,132 +290,145 @@ describe('character routes', () => {
     });
 
     it('awards XP and levels up a character', async () => {
-        supabaseFromMock
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
+        let characterCalls = 0;
+
+        supabaseFromMock.mockImplementation((table: string) => {
+            if (table === 'campaigns') {
+                return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
+            }
+            if (table === 'campaign_members') {
+                return createQueryBuilder({
                     data: { id: 1, campaign_id: 7, user_id: 42, role: 'DM', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
-                    data: {
-                        id: 101,
-                        campaign_id: 7,
-                        user_id: 55,
-                        name: 'Aelar',
-                        class_name: 'Ranger',
-                        species: 'Elf',
-                        background: null,
-                        backstory: null,
-                        is_npc: false,
-                        level: 1,
-                        xp: 900,
-                        ability_scores: {
-                            strength: 10,
-                            dexterity: 16,
-                            constitution: 12,
-                            intelligence: 10,
-                            wisdom: 14,
-                            charisma: 10,
-                        },
-                        combat_stats: {
-                            hp_current: 12,
-                            hp_max: 12,
-                            armor_class: 15,
-                            speed: 30,
-                            proficiency_bonus: 2,
-                        },
-                        progression_state: { milestones: [], talents: [], notes: [] },
-                        currency: {},
-                        notes: null,
-                        created_at: '2026-05-11T00:00:00.000Z',
-                        updated_at: '2026-05-11T00:00:00.000Z',
-                    },
-                    error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ error: null }, 'eq', 2)
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ error: null }, 'insert')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ error: null }, 'insert')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: { id: 901 }, error: null }, 'single')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
-                    data: {
-                        id: 101,
-                        campaign_id: 7,
-                        user_id: 55,
-                        name: 'Aelar',
-                        class_name: 'Ranger',
-                        species: 'Elf',
-                        background: null,
-                        backstory: null,
-                        is_npc: false,
-                        level: 2,
-                        xp: 1150,
-                        ability_scores: {
-                            strength: 10,
-                            dexterity: 16,
-                            constitution: 12,
-                            intelligence: 10,
-                            wisdom: 14,
-                            charisma: 10,
-                        },
-                        combat_stats: {
-                            hp_current: 18,
-                            hp_max: 18,
-                            armor_class: 15,
-                            speed: 30,
-                            proficiency_bonus: 2,
-                        },
-                        progression_state: { milestones: [], talents: [], notes: [] },
-                        currency: {},
-                        notes: null,
-                        created_at: '2026-05-11T00:00:00.000Z',
-                        updated_at: '2026-05-11T00:00:00.000Z',
-                    },
-                    error: null,
-                }, 'maybeSingle')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({ data: [], error: null }, 'order')
-            )
-            .mockImplementationOnce(() =>
-                createQueryBuilder({
-                    data: [
-                        {
-                            id: 801,
-                            campaign_id: 7,
-                            character_id: 101,
-                            change_type: 'level_up',
-                            amount: 1,
-                            previous_xp: 900,
-                            new_xp: 1150,
-                            previous_level: 1,
-                            new_level: 2,
-                            reason: 'Quest completion',
-                            metadata: { source: 'quest' },
-                            created_by: 42,
-                            created_at: '2026-05-11T00:01:00.000Z',
-                        },
-                    ],
-                    error: null,
-                }, 'limit')
-            );
+                }, 'maybeSingle');
+            }
+            if (table === 'characters') {
+                return {
+                    select: jest.fn().mockReturnThis(),
+                    eq: jest.fn().mockReturnThis(),
+                    update: jest.fn().mockReturnThis(),
+                    maybeSingle: jest.fn().mockImplementation(() => {
+                        characterCalls += 1;
+                        if (characterCalls === 1) {
+                            return Promise.resolve({
+                                data: {
+                                    id: 101,
+                                    campaign_id: 7,
+                                    user_id: 55,
+                                    name: 'Aelar',
+                                    class_name: 'Ranger',
+                                    species: 'Elf',
+                                    background: null,
+                                    backstory: null,
+                                    is_npc: false,
+                                    level: 1,
+                                    xp: 900,
+                                    ability_scores: {
+                                        strength: 10,
+                                        dexterity: 16,
+                                        constitution: 12,
+                                        intelligence: 10,
+                                        wisdom: 14,
+                                        charisma: 10,
+                                    },
+                                    combat_stats: {
+                                        hp_current: 12,
+                                        hp_max: 12,
+                                        armor_class: 15,
+                                        speed: 30,
+                                        proficiency_bonus: 2,
+                                    },
+                                    progression_state: { milestones: [], talents: [], notes: [] },
+                                    currency: {},
+                                    notes: null,
+                                    created_at: '2026-05-11T00:00:00.000Z',
+                                    updated_at: '2026-05-11T00:00:00.000Z',
+                                },
+                                error: null,
+                            });
+                        } else {
+                            return Promise.resolve({
+                                data: {
+                                    id: 101,
+                                    campaign_id: 7,
+                                    user_id: 55,
+                                    name: 'Aelar',
+                                    class_name: 'Ranger',
+                                    species: 'Elf',
+                                    background: null,
+                                    backstory: null,
+                                    is_npc: false,
+                                    level: 2,
+                                    xp: 1150,
+                                    ability_scores: {
+                                        strength: 10,
+                                        dexterity: 16,
+                                        constitution: 12,
+                                        intelligence: 10,
+                                        wisdom: 14,
+                                        charisma: 10,
+                                    },
+                                    combat_stats: {
+                                        hp_current: 18,
+                                        hp_max: 18,
+                                        armor_class: 15,
+                                        speed: 30,
+                                        proficiency_bonus: 2,
+                                    },
+                                    progression_state: { milestones: [], talents: [], notes: [] },
+                                    currency: {},
+                                    notes: null,
+                                    created_at: '2026-05-11T00:00:00.000Z',
+                                    updated_at: '2026-05-11T00:00:00.000Z',
+                                },
+                                error: null,
+                            });
+                        }
+                    })
+                };
+            }
+            if (table === 'campaign_events') {
+                return createQueryBuilder({ data: { id: 901 }, error: null }, 'single');
+            }
+            if (table === 'inventory_items') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_equipment') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_status_effects') {
+                return createQueryBuilder({ data: [], error: null }, 'order');
+            }
+            if (table === 'character_progression_log') {
+                return {
+                    insert: jest.fn().mockResolvedValue({ error: null }),
+                    select: jest.fn().mockReturnThis(),
+                    eq: jest.fn().mockReturnThis(),
+                    order: jest.fn().mockReturnThis(),
+                    limit: jest.fn().mockResolvedValue({
+                        data: [
+                            {
+                                id: 801,
+                                campaign_id: 7,
+                                character_id: 101,
+                                change_type: 'level_up',
+                                amount: 1,
+                                previous_xp: 900,
+                                new_xp: 1150,
+                                previous_level: 1,
+                                new_level: 2,
+                                reason: 'Quest completion',
+                                metadata: { source: 'quest' },
+                                created_by: 42,
+                                created_at: '2026-05-11T00:01:00.000Z',
+                            },
+                        ],
+                        error: null,
+                    })
+                };
+            }
+            throw new Error(`Unexpected table query: ${table}`);
+        });
 
         const response = await request(app)
             .post('/api/campaigns/7/characters/101/xp')

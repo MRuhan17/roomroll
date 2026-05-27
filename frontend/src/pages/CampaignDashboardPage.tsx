@@ -304,9 +304,43 @@ export function CampaignDashboardPage() {
             ))}
           </div>
         ) : campaignsQuery.error ? (
-          <div className="p-6 rounded-xl border border-red-900/40 bg-red-950/15 text-center space-y-3">
-            <p className="text-red-400 font-serif italic text-sm">Failed to consult active chronicles. Try checking your leyline connection.</p>
-            <Button size="sm" onClick={() => campaignsQuery.refetch()} className="bg-transparent border border-red-800 text-red-200">Retry Fetching</Button>
+          <div className="p-6 rounded-xl border border-red-900/40 bg-red-950/15 text-left space-y-4 max-w-2xl mx-auto relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 bg-red-900/5 blur-[30px] rounded-full pointer-events-none" />
+            <div className="flex items-start gap-4">
+              <div className="rounded-full bg-[#ab211f]/10 p-3 border border-[#ab211f]/30">
+                <Shield className="h-6 w-6 text-[#ab211f]" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-base font-display font-semibold text-[#f5efe2]">Leyline Interruption Detected</h4>
+                <p className="text-red-400 font-serif italic text-sm leading-relaxed">
+                  Failed to consult active chronicles. Try checking your leyline connection.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-red-900/20 space-y-3 text-xs font-mono text-[#cbc3b5]/70">
+              <div className="flex justify-between gap-4">
+                <span className="text-[#cbc3b5]/40 shrink-0">🔮 Target Leyline:</span>
+                <span className="text-[#cbc3b5] break-all text-right">{api.defaults.baseURL}/api/campaigns</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-[#cbc3b5]/40 shrink-0">📜 Diagnostic Message:</span>
+                <span className="text-red-400 break-all text-right">{getApiErrorMessage(campaignsQuery.error, "Connection terminated prematurely.")}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-serif italic text-[#cbc3b5]/50 leading-relaxed pl-3 border-l border-[#d5b45d]/20">
+                Troubleshooting Tip: Verify that your local backend server is running on port 5000, or verify that the production server is reachable and CORS settings allow requests from this origin.
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Button 
+                size="sm" 
+                onClick={() => campaignsQuery.refetch()} 
+                className="bg-[#ab211f]/20 hover:bg-[#ab211f]/40 text-[#f5efe2] border border-[#ab211f]/50 font-display uppercase tracking-widest text-xs"
+              >
+                Re-attune Connection
+              </Button>
+            </div>
           </div>
         ) : campaigns && campaigns.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2">

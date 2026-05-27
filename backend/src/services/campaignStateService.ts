@@ -1,5 +1,5 @@
 import { supabase } from '../config/db';
-import { Campaign, CampaignEvent, CampaignMember, CampaignMemory, CampaignQuest, CampaignWorldEvent } from '../types/campaign';
+import { Campaign, CampaignEvent, CampaignParticipant, CampaignMemory, CampaignQuest, CampaignWorldEvent } from '../types/campaign';
 import { CampaignCharacter } from '../types/character';
 import { DiceRollRow } from '../types/dice';
 import { CampaignMap, MapToken } from '../types/map';
@@ -7,7 +7,7 @@ import { listCharacters } from './characterService';
 
 export interface CampaignSnapshot {
     campaign: Campaign | null;
-    members: CampaignMember[];
+    members: CampaignParticipant[];
     activeMap: CampaignMap | null;
     tokens: MapToken[];
     quests: CampaignQuest[];
@@ -187,7 +187,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
 
     return {
         campaign,
-        members: (membersResult.data ?? []) as CampaignMember[],
+        members: (membersResult.data ?? []) as CampaignParticipant[],
         activeMap: (activeMapResult.data ?? null) as CampaignMap | null,
         tokens,
         quests: (questsResult.data ?? []) as CampaignQuest[],

@@ -54,7 +54,7 @@ export interface CampaignSessionState {
     }>;
 }
 
-export interface CampaignMember {
+export interface CampaignParticipant {
     id: number;
     campaign_id: number;
     user_id: number;

@@ -49,7 +49,7 @@ export interface Campaign {
   created_at: string;
 }
 
-export interface CampaignMember {
+export interface CampaignParticipant {
   id: number;
   campaign_id: number;
   user_id: number;
@@ -269,7 +269,7 @@ export interface DiceRollRow {
 
 export interface CampaignSnapshot {
   campaign: Campaign | null;
-  members: CampaignMember[];
+  members: CampaignParticipant[];
   activeMap: CampaignMap | null;
   tokens: CampaignMapToken[];
   quests: CampaignQuest[];

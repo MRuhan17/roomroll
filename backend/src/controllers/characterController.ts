@@ -14,7 +14,7 @@ import {
     updateStatusEffect,
 } from '../services/characterService';
 import { getMember } from '../services/campaignService';
-import { CampaignMember } from '../types/campaign';
+import { CampaignParticipant } from '../types/campaign';
 import { EquipmentSlot } from '../types/character';
 
 export const listCharactersHandler = async (req: Request, res: Response) => {
@@ -550,7 +550,7 @@ export const removeStatusEffectHandler = async (req: Request, res: Response) => 
     }
 };
 
-const resolveOwnerUserId = (member: CampaignMember, requesterUserId: number, requestedUserId?: number): number | null => {
+const resolveOwnerUserId = (member: CampaignParticipant, requesterUserId: number, requestedUserId?: number): number | null => {
     if (member.role === 'DM') {
         return requestedUserId ?? requesterUserId;
     }
@@ -562,7 +562,7 @@ const resolveOwnerUserId = (member: CampaignMember, requesterUserId: number, req
     return requesterUserId;
 };
 
-const canManageCharacter = (member: CampaignMember, characterOwnerUserId: number, requesterUserId: number): boolean => {
+const canManageCharacter = (member: CampaignParticipant, characterOwnerUserId: number, requesterUserId: number): boolean => {
     return member.role === 'DM' || characterOwnerUserId === requesterUserId;
 };
 
