@@ -9,6 +9,7 @@ import tokenRoutes from './routes/tokenRoutes';
 import aiRoutes from './routes/aiRoutes';
 import characterRoutes from './routes/characterRoutes';
 import loreRoutes from './routes/loreRoutes';
+import adminRoutes from './routes/adminRoutes';
 import { createLogger } from './lib/logger';
 import { requestLogger } from './middleware/requestLogger';
 
@@ -48,6 +49,7 @@ export function createApp() {
     app.use('/api/campaigns/:campaignId/characters', characterRoutes);
     app.use('/api/campaigns/:id/world', loreRoutes);
     app.use('/api/ai', aiRoutes);
+    app.use('/api/admin', adminRoutes);
 
     app.use((error: unknown, req: Request, res: Response, _next: unknown) => {
         logger.error('Unhandled application error', {
