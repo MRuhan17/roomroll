@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { Campaign, CampaignMember, CampaignSnapshot } from "@/types/campaign";
+import type { Campaign, CampaignParticipant, CampaignSnapshot } from "@/types/campaign";
 
 export async function createCampaign(
   name: string, 
@@ -47,7 +47,7 @@ export async function updateCampaignPacing(
 }
 
 export async function joinCampaign(inviteCode: string) {
-  const res = await api.post<{ campaign: Campaign; membership: CampaignMember }>("/api/campaigns/join", { inviteCode });
+  const res = await api.post<{ campaign: Campaign; membership: CampaignParticipant }>("/api/campaigns/join", { inviteCode });
   return res.data;
 }
 
@@ -57,7 +57,7 @@ export async function getActiveCampaign() {
 }
 
 export async function getCampaign(campaignId: number) {
-  const res = await api.get<{ campaign: Campaign; members: CampaignMember[] }>(`/api/campaigns/${campaignId}`);
+  const res = await api.get<{ campaign: Campaign; members: CampaignParticipant[] }>(`/api/campaigns/${campaignId}`);
   return res.data;
 }
 

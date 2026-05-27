@@ -36,7 +36,7 @@ describe('character routes', () => {
             if (table === 'campaigns') {
                 return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
             }
-            if (table === 'campaign_members') {
+            if (table === 'campaign_participants') {
                 return createQueryBuilder({
                     data: { id: 1, campaign_id: 7, user_id: 42, role: 'DM', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,
@@ -147,7 +147,7 @@ describe('character routes', () => {
             if (table === 'campaigns') {
                 return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
             }
-            if (table === 'campaign_members') {
+            if (table === 'campaign_participants') {
                 return createQueryBuilder({
                     data: { id: 2, campaign_id: 7, user_id: 42, role: 'player', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,
@@ -296,7 +296,7 @@ describe('character routes', () => {
             if (table === 'campaigns') {
                 return createQueryBuilder({ data: { id: 7, name: 'Test Campaign' }, error: null }, 'maybeSingle');
             }
-            if (table === 'campaign_members') {
+            if (table === 'campaign_participants') {
                 return createQueryBuilder({
                     data: { id: 1, campaign_id: 7, user_id: 42, role: 'DM', joined_at: '2026-05-11T00:00:00.000Z' },
                     error: null,

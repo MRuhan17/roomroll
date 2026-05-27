@@ -5,7 +5,7 @@ import type {
   Campaign,
   CampaignMap,
   CampaignMapToken,
-  CampaignMember,
+  CampaignParticipant,
   CampaignMemory,
   CampaignRole,
   CampaignSessionState,
@@ -107,7 +107,7 @@ function sortParticipants(participants: SessionParticipant[]) {
 }
 
 function buildParticipants(
-  members: CampaignMember[],
+  members: CampaignParticipant[],
   onlineUserIds: number[],
   currentUser: User | null,
   existingParticipants: SessionParticipant[] = [],

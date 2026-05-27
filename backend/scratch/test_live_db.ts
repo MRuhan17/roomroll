@@ -48,7 +48,7 @@ async function run() {
         console.log('\n--- 3. Testing campaign_members join query ---');
         // Let's find one user who has campaigns
         const { data: members, error: memberError } = await supabase
-            .from('campaign_members')
+            .from('campaign_participants')
             .select('*, campaigns(*)')
             .limit(3);
 
@@ -60,7 +60,7 @@ async function run() {
 
         console.log('\n--- 4. Testing singular vs plural join ---');
         const { data: singularJoin, error: singularError } = await supabase
-            .from('campaign_members')
+            .from('campaign_participants')
             .select('*, campaign(*)')
             .limit(1);
         

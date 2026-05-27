@@ -21,5 +21,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1"
   }
 }

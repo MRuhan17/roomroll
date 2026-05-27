@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS campaign_members (
+CREATE TABLE IF NOT EXISTS campaign_participants (
     id SERIAL PRIMARY KEY,
     campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

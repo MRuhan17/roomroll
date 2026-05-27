@@ -35,7 +35,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
     const activeSessionId = campaign?.current_session_state?.session_id;
 
     const membersPromise = supabase
-        .from('campaign_members')
+        .from('campaign_participants')
         .select('*')
         .eq('campaign_id', campaignId);
 
