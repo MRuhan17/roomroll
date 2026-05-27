@@ -9,4 +9,5 @@ export interface NarrationResponse {
     narration: string;
     usedFallback: boolean;
     promptSummary: string;
+    detectedMoment?: any;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { decodeCampaignId } from "@/lib/campaignId";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bot,
@@ -12,6 +13,7 @@ import {
   Wand2,
   CloudRain,
   Music,
+  Volume2,
   Wifi,
   WifiOff,
   AlertTriangle,
@@ -36,7 +38,8 @@ import {
   updateStoryPoint,
   getSessionRecaps,
   generateSessionRecap,
-  updateCampaignPacing
+  updateCampaignPacing,
+  updateCampaignAmbience
 } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
 import { SocketEvents, connectSocket, disconnectSocket, getSocket } from "@/services/socket";
@@ -45,6 +48,9 @@ import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
 import { SessionRecapCinematic } from "@/components/campaign/SessionRecapCinematic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CinematicPopupManager } from "@/components/CinematicPopupManager";
+import { FlashbackTimeline } from "@/components/FlashbackTimeline";
+import type { CampaignMemory } from "@/types/campaign";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TacticalMap, MapToken } from "@/components/campaign/TacticalMap";
@@ -150,9 +156,48 @@ function PresenceLine({ participants }: { participants: SessionParticipant[] }) 
   );
 }
 
+const MOOD_STYLES = {
+  tension: {
+    name: "Tension",
+    color: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+    bgGlow: "rgba(245, 158, 11, 0.15)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.15),transparent_40%)]"
+  },
+  mystery: {
+    name: "Mystery",
+    color: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+    bgGlow: "rgba(168, 85, 247, 0.15)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.15),transparent_40%)]"
+  },
+  horror: {
+    name: "Horror",
+    color: "text-rose-400 border-rose-500/30 bg-rose-500/10",
+    bgGlow: "rgba(244, 63, 94, 0.2)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.2),transparent_40%)]"
+  },
+  chaos: {
+    name: "Chaos",
+    color: "text-red-400 border-red-500/30 bg-red-500/10",
+    bgGlow: "rgba(239, 68, 68, 0.2)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.25),transparent_40%)]"
+  },
+  triumph: {
+    name: "Triumph",
+    color: "text-[#d5b45d] border-[#d5b45d]/30 bg-[#d5b45d]/10",
+    bgGlow: "rgba(213, 180, 93, 0.2)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(213,180,93,0.2),transparent_40%)]"
+  },
+  "emotional intensity": {
+    name: "Emotional Intensity",
+    color: "text-pink-400 border-pink-500/30 bg-pink-500/10",
+    bgGlow: "rgba(236, 72, 153, 0.15)",
+    backdrop: "bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.15),transparent_40%)]"
+  }
+} as const;
+
 export function RoomPage() {
   const { id } = useParams<{ id: string }>();
-  const campaignId = Number(id);
+  const campaignId = decodeCampaignId(id);
 
   const { user, token } = useAuthStore();
   const {
@@ -166,6 +211,7 @@ export function RoomPage() {
     narrationFeed,
     worldEvents,
     diceHistory,
+    memories,
     lastDiceRoll,
     typingUserIds,
     aiPending,
@@ -244,6 +290,146 @@ export function RoomPage() {
   const [pacingIntensityState, setPacingIntensityState] = useState<'auto' | 'slow' | 'balanced' | 'fast'>("balanced");
   const [criticalArcsState, setCriticalArcsState] = useState<string[]>([]);
   const [newArcInput, setNewArcInput] = useState("");
+
+  const [soundtrackPlaying, setSoundtrackPlaying] = useState(true);
+  const [transitioningAmbience, setTransitioningAmbience] = useState(false);
+  
+  const [deckTab, setDeckTab] = useState<'narration' | 'flashbacks'>('narration');
+
+  // Highlight keywords that reference past emotional moments
+  const highlightMemories = (text: string, campaignMemories: CampaignMemory[]) => {
+    if (!campaignMemories || campaignMemories.length === 0) return text;
+    
+    const emotionalMoments = campaignMemories.filter(m => m.is_emotional_moment || m.moment_type);
+    if (emotionalMoments.length === 0) return text;
+
+    const keywordsMap: Array<{ term: string; memory: CampaignMemory }> = [];
+    
+    emotionalMoments.forEach(m => {
+      const words = m.summary.split(/\s+/);
+      words.forEach((w, idx) => {
+        const cleanWord = w.replace(/[^a-zA-Z0-9]/g, '');
+        if (cleanWord.length > 2 && /^[A-Z]/.test(cleanWord)) {
+          if (idx === 0 && (cleanWord === 'The' || cleanWord === 'Player' || cleanWord === 'A' || cleanWord === 'An' || cleanWord === 'This')) {
+            return;
+          }
+          keywordsMap.push({ term: cleanWord, memory: m });
+        }
+      });
+      
+      if (m.moment_type === 'famous_roll') {
+        keywordsMap.push({ term: 'natural 20', memory: m });
+        keywordsMap.push({ term: 'natural 1', memory: m });
+        keywordsMap.push({ term: 'critical success', memory: m });
+        keywordsMap.push({ term: 'critical failure', memory: m });
+      }
+      if (m.moment_type === 'dead_companion') {
+        keywordsMap.push({ term: 'perished', memory: m });
+        keywordsMap.push({ term: 'sacrificed', memory: m });
+        keywordsMap.push({ term: 'sacrifice', memory: m });
+      }
+      if (m.moment_type === 'betrayal') {
+        keywordsMap.push({ term: 'betrayed', memory: m });
+        keywordsMap.push({ term: 'betrayal', memory: m });
+      }
+      if (m.moment_type === 'failed_quest') {
+        keywordsMap.push({ term: 'failed', memory: m });
+        keywordsMap.push({ term: 'failure', memory: m });
+      }
+      if (m.moment_type === 'legendary_victory') {
+        keywordsMap.push({ term: 'victory', memory: m });
+        keywordsMap.push({ term: 'slayed', memory: m });
+        keywordsMap.push({ term: 'defeated', memory: m });
+      }
+    });
+
+    const sortedKeywords = keywordsMap
+      .filter((v, i, a) => a.findIndex(t => t.term.toLowerCase() === v.term.toLowerCase()) === i)
+      .sort((a, b) => b.term.length - a.term.length);
+
+    if (sortedKeywords.length === 0) return text;
+
+    let parts: React.ReactNode[] = [text];
+    
+    sortedKeywords.forEach(({ term, memory }) => {
+      const nextParts: React.ReactNode[] = [];
+      parts.forEach(part => {
+        if (typeof part !== 'string') {
+          nextParts.push(part);
+          return;
+        }
+        
+        const termRegex = new RegExp(`\\b(${term})\\b`, 'gi');
+        const splits = part.split(termRegex);
+        if (splits.length === 1) {
+          nextParts.push(part);
+          return;
+        }
+        
+        splits.forEach((split, idx) => {
+          if (idx % 2 === 1) {
+            const typeColor = 
+              memory.moment_type === 'legendary_victory' || memory.moment_type === 'famous_roll' ? 'decoration-yellow-400/80 text-yellow-200' :
+              memory.moment_type === 'betrayal' ? 'decoration-red-400/80 text-red-200' :
+              memory.moment_type === 'dead_companion' || memory.moment_type === 'failed_quest' ? 'decoration-rose-400/80 text-rose-200' :
+              'decoration-purple-400/80 text-purple-200';
+
+            nextParts.push(
+              <span 
+                key={`${term}-${idx}`} 
+                className={cn("underline decoration-wavy underline-offset-4 cursor-help relative group/tooltip inline-block font-semibold", typeColor)}
+              >
+                {split}
+                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-xl border border-tavern-border bg-stone-950/95 p-3 text-xs text-[#cbc3b5] shadow-2xl opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-300 z-[999] backdrop-blur-md text-center leading-normal font-normal">
+                  <span className="block font-mono text-[9px] uppercase tracking-wider text-stone-500 mb-1">
+                    🔮 Memory Callback:
+                  </span>
+                  "{memory.summary}"
+                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-stone-950/95" />
+                </span>
+              </span>
+            );
+          } else if (split) {
+            nextParts.push(split);
+          }
+        });
+      });
+      parts = nextParts;
+    });
+
+    return parts;
+  };
+
+  const currentMood = (sessionState?.mood as keyof typeof MOOD_STYLES) || "tension";
+  const currentAmbience = sessionState?.ambience || "dungeon echoes";
+  const moodStyle = MOOD_STYLES[currentMood] || MOOD_STYLES.tension;
+
+  const handleTransitionAmbience = async (newMood?: string, newAmbience?: string) => {
+    try {
+      setTransitioningAmbience(true);
+      await updateCampaignAmbience(campaignId, newMood, newAmbience);
+    } catch (err) {
+      console.error("Failed to update ambience:", err);
+      setLastError("Failed to transition session atmosphere.");
+    } finally {
+      setTransitioningAmbience(false);
+    }
+  };
+
+  const getSoundtrackTrack = (mood: string, ambience: string) => {
+    if (ambience === "tavern ambience") return { title: "The Hearthfire Lute", artist: "Bardic Ensemble", duration: "3:45" };
+    switch (mood) {
+      case "tension": return { title: "Whispers of the Crypt", artist: "Orchestral Suspense", duration: "4:12" };
+      case "mystery": return { title: "Unrolled Leylines", artist: "Mage Scribes", duration: "5:20" };
+      case "horror": return { title: "Dread of the Abyss", artist: "Requiem Choirs", duration: "3:30" };
+      case "chaos": return { title: "Steel & Fireclash", artist: "Battle Drums", duration: "2:55" };
+      case "triumph": return { title: "Saga of the Dawn", artist: "Dawnlight Bards", duration: "4:05" };
+      case "emotional intensity": return { title: "Farewell to Oakhaven", artist: "Twilight Harps", duration: "4:40" };
+      default: return { title: "Medieval Echoes", artist: "Tabletop Ambience", duration: "4:00" };
+    }
+  };
+  
+  const currentTrack = getSoundtrackTrack(currentMood, currentAmbience);
 
   useEffect(() => {
     if (campaign && campaign.current_session_state) {
@@ -690,9 +876,105 @@ export function RoomPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="space-y-6"
+      className="space-y-6 relative"
     >
-      <div className="relative overflow-hidden rounded-[28px] border border-tavern-border bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.2),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
+      {/* Cinematic environmental particles based on mood */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[1] opacity-35">
+        {currentMood === "tension" && [...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-amber-500/40 animate-ping"
+            style={{
+              width: `${Math.random() * 6 + 2}px`,
+              height: `${Math.random() * 6 + 2}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 3 + 3}s`,
+              animationDelay: `${Math.random() * 2}s`
+            }}
+          />
+        ))}
+        {currentMood === "mystery" && [...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded bg-purple-500/20 animate-pulse"
+            style={{
+              width: `${Math.random() * 20 + 10}px`,
+              height: `${Math.random() * 20 + 10}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              filter: "blur(6px)",
+              animationDuration: `${Math.random() * 4 + 4}s`,
+              animationDelay: `${Math.random() * 2}s`
+            }}
+          />
+        ))}
+        {currentMood === "horror" && [...Array(10)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute bg-rose-950/30 animate-bounce animate-infinite"
+            style={{
+              width: `${Math.random() * 4 + 2}px`,
+              height: `${Math.random() * 4 + 2}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 80}%`,
+              animationDuration: `${Math.random() * 5 + 4}s`,
+              animationDelay: `${Math.random() * 3}s`
+            }}
+          />
+        ))}
+        {currentMood === "chaos" && [...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute bg-red-500/40 rounded-full animate-ping"
+            style={{
+              width: `${Math.random() * 5 + 3}px`,
+              height: `${Math.random() * 5 + 3}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 2 + 1}s`,
+              animationDelay: `${Math.random() * 1}s`
+            }}
+          />
+        ))}
+        {currentMood === "triumph" && [...Array(10)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute bg-yellow-400/30 rounded-full animate-pulse"
+            style={{
+              width: `${Math.random() * 4 + 1}px`,
+              height: `${Math.random() * 4 + 1}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              boxShadow: "0 0 10px rgba(234, 179, 8, 0.4)",
+              animationDuration: `${Math.random() * 3 + 2}s`
+            }}
+          />
+        ))}
+        {currentMood === "emotional intensity" && [...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute bg-pink-400/20 rounded-full animate-bounce"
+            style={{
+              width: `${Math.random() * 6 + 3}px`,
+              height: `${Math.random() * 6 + 3}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 6 + 4}s`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className={cn(
+        "relative overflow-hidden rounded-[28px] border border-tavern-border p-6 shadow-[0_30px_80px_rgba(0,0,0,0.35)] transition-all duration-1000 ease-in-out z-10",
+        currentMood === "tension" && "bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.15),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))]",
+        currentMood === "mystery" && "bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.15),_transparent_36%),linear-gradient(135deg,rgba(10,12,30,0.95),rgba(4,4,12,0.98))]",
+        currentMood === "horror" && "bg-[radial-gradient(circle_at_top_left,_rgba(244,63,94,0.18),_transparent_36%),linear-gradient(135deg,rgba(25,10,12,0.95),rgba(6,2,3,0.99))]",
+        currentMood === "chaos" && "bg-[radial-gradient(circle_at_top_left,_rgba(239,68,68,0.2),_transparent_36%),linear-gradient(135deg,rgba(25,12,10,0.94),rgba(6,3,2,0.99))]",
+        currentMood === "triumph" && "bg-[radial-gradient(circle_at_top_left,_rgba(213,180,93,0.18),_transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.94),rgba(4,9,18,0.98))]",
+        currentMood === "emotional intensity" && "bg-[radial-gradient(circle_at_top_left,_rgba(236,72,153,0.15),_transparent_36%),linear-gradient(135deg,rgba(20,10,25,0.95),rgba(5,2,8,0.99))]"
+      )}>
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_center,_rgba(34,211,238,0.12),_transparent_60%)]" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
@@ -764,14 +1046,80 @@ export function RoomPage() {
               </Button>
             )}
 
-            <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-sm text-[#cbc3b5]/70 transition-colors hover:bg-white/5 cursor-pointer">
-              <CloudRain className="h-4 w-4 text-indigo-300" />
-              Heavy Rain
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-sm text-[#cbc3b5]/70 transition-colors hover:bg-white/5 cursor-pointer">
-              <Music className="h-4 w-4 text-violet-300" />
-              Tension
-            </span>
+            {/* Dynamic Mood Indicator Dropdown (for DM) or Badge (for Players) */}
+            {isDM ? (
+              <select
+                value={currentMood}
+                onChange={(e) => handleTransitionAmbience(e.target.value, undefined)}
+                disabled={transitioningAmbience}
+                className="bg-black/50 border border-tavern-border rounded-full px-3 py-1.5 text-xs text-[#cbc3b5] hover:border-[#d5b45d]/40 focus:ring-0 cursor-pointer font-display uppercase tracking-wider h-9"
+                title="Shift Session Mood"
+              >
+                <option value="tension">⚠️ Mood: Tension</option>
+                <option value="mystery">🔮 Mood: Mystery</option>
+                <option value="horror">👁️ Mood: Horror</option>
+                <option value="chaos">🔥 Mood: Chaos</option>
+                <option value="triumph">👑 Mood: Triumph</option>
+                <option value="emotional intensity">❤️ Mood: Intensity</option>
+              </select>
+            ) : (
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-display uppercase tracking-wider",
+                moodStyle.color
+              )}>
+                <span>{currentMood === 'tension' ? '⚠️' : currentMood === 'mystery' ? '🔮' : currentMood === 'horror' ? '👁️' : currentMood === 'chaos' ? '🔥' : currentMood === 'triumph' ? '👑' : '❤️'}</span>
+                Mood: {currentMood}
+              </span>
+            )}
+
+            {/* Dynamic Ambience Indicator Dropdown (for DM) or Badge (for Players) */}
+            {isDM ? (
+              <select
+                value={currentAmbience}
+                onChange={(e) => handleTransitionAmbience(undefined, e.target.value)}
+                disabled={transitioningAmbience}
+                className="bg-black/50 border border-tavern-border rounded-full px-3 py-1.5 text-xs text-[#cbc3b5] hover:border-[#d5b45d]/40 focus:ring-0 cursor-pointer font-display uppercase tracking-wider h-9"
+                title="Shift Environment Ambience"
+              >
+                <option value="tavern ambience">🍻 tavern ambience</option>
+                <option value="dungeon echoes">⛓️ dungeon echoes</option>
+                <option value="storm atmosphere">⛈️ storm atmosphere</option>
+                <option value="battlefield tension">🛡️ battlefield tension</option>
+              </select>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-tavern-border bg-black/40 px-3 py-1.5 text-xs text-[#cbc3b5]/70 font-display uppercase tracking-wider">
+                <span>{currentAmbience.includes('tavern') ? '🍻' : currentAmbience.includes('dungeon') ? '⛓️' : currentAmbience.includes('storm') ? '⛈️' : '🛡️'}</span>
+                {currentAmbience}
+              </span>
+            )}
+
+            {/* Soundtrack Media Deck */}
+            <div className="flex items-center gap-3 bg-black/50 border border-tavern-border/50 rounded-full px-4 py-1.5 text-xs text-[#cbc3b5] hover:border-[#d5b45d]/20 transition-all h-9">
+              <span className="relative flex h-2 w-2">
+                {soundtrackPlaying && (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#d5b45d] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#d5b45d]"></span>
+                  </>
+                )}
+                {!soundtrackPlaying && (
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-stone-600"></span>
+                )}
+              </span>
+              <div className="flex flex-col text-left">
+                <span className="font-semibold text-[9px] text-[#f5efe2] tracking-wider uppercase font-mono max-w-[100px] truncate leading-tight">
+                  {currentTrack.title}
+                </span>
+                <span className="text-[8px] text-[#cbc3b5]/50 truncate leading-none mt-0.5">{currentTrack.artist}</span>
+              </div>
+              <button 
+                onClick={() => setSoundtrackPlaying(!soundtrackPlaying)}
+                className="hover:text-white transition-colors p-1 shrink-0 ml-1"
+                title={soundtrackPlaying ? "Mute soundtrack" : "Play soundtrack"}
+              >
+                {soundtrackPlaying ? <Volume2 className="h-3.5 w-3.5 text-[#d5b45d]" /> : <Music className="h-3.5 w-3.5 text-stone-500" />}
+              </button>
+            </div>
             <span
               className={cn(
                 "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
@@ -863,77 +1211,117 @@ export function RoomPage() {
           </Card>
 
           <Card className="overflow-hidden">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-amber-300" />
-                Narration Feed
-              </CardTitle>
-              <CardDescription>
-                Fresh AI beats, player-driven scenes, and DM overrides appear here in real time.
-              </CardDescription>
+            <CardHeader className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-amber-300" />
+                  Narration & Memory Chronicles
+                </CardTitle>
+                <CardDescription>
+                  Review the unfolding timeline, live narration beats, and historical emotional callbacks.
+                </CardDescription>
+              </div>
+              <div className="flex rounded-full bg-stone-900/60 p-0.5 border border-tavern-border/50 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDeckTab('narration')}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-display uppercase tracking-wider transition-all border border-transparent",
+                    deckTab === 'narration'
+                      ? "bg-[#d5b45d]/20 border-[#d5b45d]/30 text-[#d5b45d] font-bold"
+                      : "text-[#cbc3b5]/60 hover:text-white"
+                  )}
+                >
+                  🔥 Live Feed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeckTab('flashbacks')}
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-display uppercase tracking-wider transition-all flex items-center gap-1.5 border border-transparent",
+                    deckTab === 'flashbacks'
+                      ? "bg-[#d5b45d]/20 border-[#d5b45d]/30 text-[#d5b45d] font-bold"
+                      : "text-[#cbc3b5]/60 hover:text-white"
+                  )}
+                >
+                  📜 Flashbacks {memories.filter(m => m.is_emotional_moment || m.moment_type).length > 0 && (
+                    <span className="bg-[#d5b45d] text-stone-950 font-bold font-mono text-[9px] px-1.5 py-0.5 rounded-full leading-none">
+                      {memories.filter(m => m.is_emotional_moment || m.moment_type).length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {showNarrationThinking ? (
-                <div className="animate-thinking-pulse rounded-2xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.12),rgba(15,23,42,0.84))] p-4 text-sm text-amber-50">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-300/10 text-amber-200">
-                      <LoaderCircle className="h-5 w-5 animate-spin" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Roomroll AI is shaping the next scene.</p>
-                      <p className="text-xs uppercase tracking-[0.24em] text-amber-100/70">Cinematic response in progress</p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {typingParticipants.length > 0 ? (
-                <div className="rounded-2xl border border-[#ab211f]/30 bg-[#ab211f]/10 p-4 text-sm text-[#d5b45d]">
-                  <PresenceLine participants={typingParticipants} />
-                </div>
-              ) : null}
-
-              <div className="max-h-[560px] space-y-4 overflow-y-auto pr-1">
-                {narrationFeed.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-tavern-border bg-white/5 px-5 py-6 text-sm text-[#cbc3b5]/70">
-                    No narration has been recorded yet. Use the AI panel to seed the scene or broadcast a DM beat.
-                  </div>
-                ) : null}
-
-                {narrationFeed.map((entry) => {
-                  const badge = getNarrationBadge(entry);
-                  const isHighlighted = cinematicNarrationId === entry.id;
-
-                  return (
-                    <article
-                      key={entry.id}
-                      className={cn(
-                        "rounded-[22px] border border-tavern-border bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(6,10,18,0.96))] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
-                        isHighlighted && "animate-narration-rise ring-1 ring-amber-300/35",
-                      )}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={cn("rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]", badge.className)}>
-                            {badge.label}
-                          </span>
-                          {entry.tone ? (
-                            <span className="rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-[#cbc3b5]/70">
-                              {entry.tone}
-                            </span>
-                          ) : null}
+              {deckTab === 'narration' ? (
+                <>
+                  {showNarrationThinking ? (
+                    <div className="animate-thinking-pulse rounded-2xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.12),rgba(15,23,42,0.84))] p-4 text-sm text-amber-50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-300/10 text-amber-200">
+                          <LoaderCircle className="h-5 w-5 animate-spin" />
                         </div>
-                        <span className="text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">{formatClock(entry.createdAt)}</span>
+                        <div>
+                          <p className="font-medium">Roomroll AI is shaping the next scene.</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-amber-100/70">Cinematic response in progress</p>
+                        </div>
                       </div>
-                      <p className="mt-4 font-serif text-xl leading-8 text-[#f5efe2]">{entry.text}</p>
-                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#cbc3b5]/70">
-                        <span>By {entry.authorLabel}</span>
-                        {entry.playerAction ? <span>Prompted by: {entry.playerAction}</span> : null}
+                    </div>
+                  ) : null}
+
+                  {typingParticipants.length > 0 ? (
+                    <div className="rounded-2xl border border-[#ab211f]/30 bg-[#ab211f]/10 p-4 text-sm text-[#d5b45d]">
+                      <PresenceLine participants={typingParticipants} />
+                    </div>
+                  ) : null}
+
+                  <div className="max-h-[560px] space-y-4 overflow-y-auto pr-1">
+                    {narrationFeed.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-tavern-border bg-white/5 px-5 py-6 text-sm text-[#cbc3b5]/70">
+                        No narration has been recorded yet. Use the AI panel to seed the scene or broadcast a DM beat.
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
+                    ) : null}
+
+                    {narrationFeed.map((entry) => {
+                      const badge = getNarrationBadge(entry);
+                      const isHighlighted = cinematicNarrationId === entry.id;
+
+                      return (
+                        <article
+                          key={entry.id}
+                          className={cn(
+                            "rounded-[22px] border border-tavern-border bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(6,10,18,0.96))] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.22)]",
+                            isHighlighted && "animate-narration-rise ring-1 ring-amber-300/35",
+                          )}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={cn("rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]", badge.className)}>
+                                {badge.label}
+                              </span>
+                              {entry.tone ? (
+                                <span className="rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-[#cbc3b5]/70">
+                                  {entry.tone}
+                                </span>
+                              ) : null}
+                            </div>
+                            <span className="text-xs uppercase tracking-[0.24em] text-[#cbc3b5]/70">{formatClock(entry.createdAt)}</span>
+                          </div>
+                          <p className="mt-4 font-serif text-xl leading-8 text-[#f5efe2]">{highlightMemories(entry.text, memories)}</p>
+                          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#cbc3b5]/70">
+                            <span>By {entry.authorLabel}</span>
+                            {entry.playerAction ? <span>Prompted by: {entry.playerAction}</span> : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="max-h-[560px] overflow-y-auto pr-1">
+                  <FlashbackTimeline />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1949,6 +2337,7 @@ export function RoomPage() {
             onClose={() => setActiveRecap(null)}
           />
         )}
+        <CinematicPopupManager />
       </AnimatePresence>
     </motion.section>
   );

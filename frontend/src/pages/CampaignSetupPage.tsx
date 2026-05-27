@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { decodeCampaignId, encodeCampaignId } from "@/lib/campaignId";
 import { motion } from "framer-motion";
 import { 
   ShieldAlert, 
@@ -76,7 +77,7 @@ export default function CampaignSetupPage() {
     if (!campaignId) return;
     setLoading(true);
     setError(null);
-    const cid = parseInt(campaignId);
+    const cid = decodeCampaignId(campaignId);
 
     try {
       // Step 1: Foundations
@@ -155,7 +156,7 @@ export default function CampaignSetupPage() {
         setForgeSteps(prev => ({ ...prev, faction: 'success' }));
       }
 
-      navigate(`/campaign/${cid}`); // Go to session dashboard
+      navigate(`/rooms/${encodeCampaignId(cid)}`); // Go to session dashboard
     } catch (err: any) {
       const msg = getApiErrorMessage(err, "Failed to setup campaign.");
       if (msg.toLowerCase().includes("invalid or expired token") || msg.toLowerCase().includes("unauthorized")) {

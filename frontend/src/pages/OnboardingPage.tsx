@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { encodeCampaignId } from "@/lib/campaignId";
 import { motion } from "framer-motion";
 import { 
   Plus, 
@@ -144,7 +145,7 @@ export function OnboardingPage() {
       ),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
-      navigate(`/campaigns/${data.campaign.id}/setup`);
+      navigate(`/campaigns/${encodeCampaignId(data.campaign.id)}/setup`);
     },
     onError: (err) => {
       const msg = getApiErrorMessage(err, "Could not forge world.");

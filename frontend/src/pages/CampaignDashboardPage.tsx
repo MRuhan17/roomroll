@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { encodeCampaignId } from "@/lib/campaignId";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Play, Plus, Search, BookOpen, Scroll, History, Shield, Flame, Sparkles } from "lucide-react";
@@ -51,7 +52,7 @@ export function CampaignDashboardPage() {
       setCreateDesc("");
       setCreateWorld("");
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
-      navigate(`/campaigns/${data.campaign.id}/setup`);
+      navigate(`/campaigns/${encodeCampaignId(data.campaign.id)}/setup`);
     },
     onError: (error) => setFeedback(getApiErrorMessage(error, "Could not create campaign.")),
   });
@@ -62,7 +63,7 @@ export function CampaignDashboardPage() {
       setFeedback(`Joined campaign "${data.campaign.name}".`);
       setJoinCode("");
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
-      navigate(`/campaigns/${data.campaign.id}/setup`);
+      navigate(`/campaigns/${encodeCampaignId(data.campaign.id)}/setup`);
     },
     onError: (error) => setFeedback(getApiErrorMessage(error, "Could not join campaign.")),
   });
@@ -124,7 +125,7 @@ export function CampaignDashboardPage() {
                   <Button 
                     size="lg" 
                     className="bg-[#ab211f] hover:bg-[#8f1917] text-white shadow-[0_0_20px_rgba(171,33,31,0.4)] font-display uppercase tracking-widest"
-                    onClick={() => navigate(`/rooms/${campaign.id}`)}
+                    onClick={() => navigate(`/rooms/${encodeCampaignId(campaign.id)}`)}
                   >
                     <Play className="mr-2 h-4 w-4" fill="currentColor" />
                     Continue Journey
@@ -141,14 +142,14 @@ export function CampaignDashboardPage() {
                           Realm Canon & Lore
                         </h4>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider" onClick={() => navigate(`/campaigns/${campaign.id}/recaps`)}>
+                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider" onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/recaps`)}>
                             <History className="h-3.5 w-3.5 mr-1" />
                             Session Recaps
                           </Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider" onClick={() => navigate(`/campaigns/${campaign.id}/archive`)}>
+                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider" onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/archive`)}>
                             World Archive
                           </Button>
-                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider gap-1" onClick={() => navigate(`/campaigns/${campaign.id}/tavern`)}>
+                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent border-tavern-border hover:bg-white/5 text-[#cbc3b5] font-display uppercase tracking-wider gap-1" onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/tavern`)}>
                             <Flame className="h-3.5 w-3.5 text-[#ab211f]" />
                             Visit Tavern
                           </Button>
@@ -206,7 +207,7 @@ export function CampaignDashboardPage() {
                         </div>
                         <Button
                           className="w-full bg-[#ab211f]/20 hover:bg-[#ab211f]/40 text-[#f5efe2] border border-[#ab211f]/50 font-display uppercase tracking-widest text-xs"
-                          onClick={() => navigate(`/campaigns/${campaign.id}/characters/${activeCharacter.id}`)}
+                          onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/characters/${activeCharacter.id}`)}
                         >
                           Open Character Sheet
                         </Button>
@@ -218,7 +219,7 @@ export function CampaignDashboardPage() {
                         </p>
                         <Button
                           className="w-full bg-transparent border border-tavern-border text-[#cbc3b5] hover:bg-white/5 font-display uppercase tracking-widest text-xs"
-                          onClick={() => navigate(`/campaigns/${campaign.id}/setup`)}
+                          onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/setup`)}
                         >
                           Forge Traveler Sheet
                         </Button>
@@ -239,7 +240,7 @@ export function CampaignDashboardPage() {
                           <button
                             key={character.id}
                             type="button"
-                            onClick={() => navigate(`/campaigns/${campaign.id}/characters/${character.id}`)}
+                            onClick={() => navigate(`/campaigns/${encodeCampaignId(campaign.id)}/characters/${character.id}`)}
                             className="rounded border border-tavern-border bg-black/40 px-4 py-3 text-left transition hover:bg-white/5 hover:border-[#d5b45d]/40"
                           >
                             <p className="text-base font-display font-bold text-[#f5efe2]">{character.name}</p>

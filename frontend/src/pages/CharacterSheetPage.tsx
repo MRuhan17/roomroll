@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { decodeCampaignId } from "@/lib/campaignId";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -46,7 +47,7 @@ export function CharacterSheetPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const params = useParams<{ campaignId: string; characterId: string }>();
-  const campaignId = Number(params.campaignId);
+  const campaignId = decodeCampaignId(params.campaignId);
   const characterId = Number(params.characterId);
 
   const snapshotQuery = useQuery({
@@ -129,7 +130,7 @@ export function CharacterSheetPage() {
                 <button
                   key={entry.id}
                   type="button"
-                  onClick={() => navigate(`/campaigns/${campaignId}/characters/${entry.id}`)}
+                  onClick={() => navigate(`/campaigns/${params.campaignId}/characters/${entry.id}`)}
                   className={cn(
                     "flex items-center justify-between rounded-xl border px-4 py-3 text-left transition",
                     entry.id === character?.id

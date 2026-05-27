@@ -107,4 +107,8 @@ export interface CampaignMemory {
     key_facts: Array<Record<string, unknown>> | null;
     created_at: string;
     updated_at: string;
+    session_id?: string;
+    room_id?: string;
+    is_emotional_moment?: boolean;
+    moment_type?: string;
 }

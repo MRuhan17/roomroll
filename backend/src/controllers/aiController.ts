@@ -4,6 +4,7 @@ import { createCampaignMemory } from '../services/memoryService';
 import { getMember } from '../services/campaignService';
 import { getIo } from '../socket';
 import { SocketEvents } from '../types/socket';
+import { getCampaignSnapshot } from '../services/campaignStateService';
 
 export const generateNarrationHandler = async (req: Request, res: Response) => {
     const user = req.user;
@@ -35,6 +36,24 @@ export const generateNarrationHandler = async (req: Request, res: Response) => {
             text: narration.narration,
             ai: true
         });
+        
+        // Broadcast emotional memory moment if one was logged
+        if (narration.detectedMoment) {
+            io.to(`campaign:${campaignId}`).emit(SocketEvents.NewMemoryMoment, {
+                memory: narration.detectedMoment
+            });
+        }
+        
+        // Broadcast the updated campaign state to sync the new mood/ambience with all clients
+        try {
+            const snapshot = await getCampaignSnapshot(campaignId);
+            io.to(`campaign:${campaignId}`).emit(SocketEvents.CampaignState, {
+                snapshot
+            });
+        } catch (snapErr) {
+            console.error('Failed to broadcast campaign state update after narration:', snapErr);
+        }
+        
         return res.json({ narration });
     } catch (error) {
         return res.status(500).json({ message: 'Failed to generate narration' });

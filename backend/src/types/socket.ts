@@ -21,7 +21,8 @@ export const SocketEvents = {
     TokenUpdated: 'TOKEN_UPDATED',
     TokenDeleted: 'TOKEN_DELETED',
     MapViewport: 'MAP_VIEWPORT',
-    CombatTurn: 'COMBAT_TURN'
+    CombatTurn: 'COMBAT_TURN',
+    NewMemoryMoment: 'NEW_MEMORY_MOMENT'
 } as const;
 
 export type SocketEventName = typeof SocketEvents[keyof typeof SocketEvents];

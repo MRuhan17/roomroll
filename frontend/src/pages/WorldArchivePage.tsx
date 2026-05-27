@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { decodeCampaignId } from '@/lib/campaignId';
 import { useQuery } from '@tanstack/react-query';
 import { useWorldStore } from '@/store/useWorldStore';
 import { useAuthStore } from '@/store/authStore';
@@ -12,7 +13,7 @@ import { Globe, ArrowLeft, Book, Shield, Clock } from 'lucide-react';
 export const WorldArchivePage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const campaignId = parseInt(id!);
+    const campaignId = decodeCampaignId(id);
     
     const [activeTab, setActiveTab] = useState<'lore' | 'factions' | 'timeline'>('timeline');
     

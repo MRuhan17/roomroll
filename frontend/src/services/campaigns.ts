@@ -141,3 +141,8 @@ export async function triggerTavernEvent(campaignId: number) {
   return res.data;
 }
 
+export async function updateCampaignAmbience(campaignId: number, mood?: string, ambience?: string) {
+  const res = await api.put<{ campaign: Campaign }>(`/api/campaigns/${campaignId}/ambience`, { mood, ambience });
+  return res.data;
+}
+

@@ -30,6 +30,17 @@ export function createApp() {
     });
 
     app.use('/api/auth', authRoutes);
+    
+    // Register param decoders for campaignId and id to transparently support non-sequential IDs
+    const { decodeCampaignId } = require('./utils/campaignId');
+    app.param('campaignId', (req: any, res: any, next: any, val: any) => {
+        req.params.campaignId = String(decodeCampaignId(val));
+        next();
+    });
+    app.param('id', (req: any, res: any, next: any, val: any) => {
+        req.params.id = String(decodeCampaignId(val));
+        next();
+    });
     app.use('/api/rooms', roomRoutes);
     app.use('/api/campaigns', campaignRoutes);
     app.use('/api/campaigns/:campaignId/maps', mapRoutes);

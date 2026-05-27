@@ -69,6 +69,86 @@ export const callOpenAi = async (prompt: string): Promise<string | null> => {
     return data.choices?.[0]?.message?.content?.trim() ?? null;
 };
 
+export const detectSessionMoodAndAmbience = async (narrationText: string): Promise<{ mood: string; ambience: string }> => {
+    const prompt = `Analyze this tabletop roleplaying game narration text and classify its emotional mood and environmental ambience.
+Text: "${narrationText}"
+
+Select the single best fitting mood from these options:
+- tension (suspenseful, nervous, high stakes, waiting for danger)
+- mystery (inquisitive, exploring secrets, ancient ruins, deciphering clues)
+- horror (creepy, terrifying, monstrosities, death, dread)
+- chaos (frantic, messy battle, explosions, structural collapse, disarray)
+- triumph (victory, celebration, unlocking powerful items, solving puzzles, relief)
+- emotional intensity (dramatic confessions, sacrifice, loss, deep bonding)
+
+Select the single best fitting ambience state label from these options:
+- tavern ambience
+- dungeon echoes
+- storm atmosphere
+- battlefield tension
+
+Return exactly in JSON format:
+{ "mood": "selected_mood", "ambience": "selected_ambience" }
+Do not return any other text.`;
+
+    const response = await callOpenAi(prompt);
+    if (!response) {
+        return { mood: 'tension', ambience: 'dungeon echoes' };
+    }
+    try {
+        const cleaned = response.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+            mood: parsed.mood || 'tension',
+            ambience: parsed.ambience || 'dungeon echoes'
+        };
+    } catch {
+        return { mood: 'tension', ambience: 'dungeon echoes' };
+    }
+};
+
+export const detectSignificantMoment = async (
+    campaignId: number,
+    narrationText: string
+): Promise<{ isEmotional: boolean; type?: string; summary?: string } | null> => {
+    const prompt = `You are a cinematic tabletop RPG co-DM analyzer.
+Analyze this narration text and check if it describes any emotionally significant moment or milestone that should be recorded in long-term memory:
+- betrayal (e.g. an NPC betrays the party, hidden motivations exposed, lies revealed)
+- failed_quest (e.g. failing an objective, losing a crucial item, a quest-giver turning hostile)
+- legendary_victory (e.g. defeating a major boss, completing an epic quest, pulling off an impossible plan)
+- dead_companion (e.g. a named companion or party member perishing, a tragic sacrifice)
+- major_discovery (e.g. finding a legendary artifact, revealing ancient lore, entering a hidden location/ruin)
+
+Narration Text: "${narrationText}"
+
+If a significant moment of these types occurred, formulate a concise, dramatic 1-sentence summary of the event (written in third person, past tense, capturing the exact stakes).
+
+Respond EXACTLY in JSON format:
+{
+  "isEmotional": true or false,
+  "type": "betrayal" | "failed_quest" | "legendary_victory" | "dead_companion" | "major_discovery" or null,
+  "summary": "Concise dramatic summary of what happened" or null
+}
+Do not return any other text.`;
+
+    const response = await callOpenAi(prompt);
+    if (!response) return null;
+    try {
+        const cleaned = response.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed.isEmotional && parsed.type && parsed.summary) {
+            return {
+                isEmotional: true,
+                type: parsed.type,
+                summary: parsed.summary
+            };
+        }
+    } catch {
+        // Ignore parse errors
+    }
+    return null;
+};
+
 export const generateNarration = async (request: NarrationRequest): Promise<NarrationResponse> => {
     if (!checkCooldown(request.userId)) {
         throw new Error('AI is on cooldown. Please wait before requesting again.');
@@ -93,10 +173,52 @@ export const generateNarration = async (request: NarrationRequest): Promise<Narr
         created_by: request.userId
     });
 
+    // Detect session mood and ambience from narration dynamically
+    try {
+        const moodState = await detectSessionMoodAndAmbience(narration);
+        const { supabase } = await import('../config/db');
+        const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', request.campaignId)
+            .single();
+            
+        if (campaignData) {
+            const sessionState = campaignData.current_session_state as any || {};
+            sessionState.mood = moodState.mood;
+            sessionState.ambience = moodState.ambience;
+            await supabase
+                .from('campaigns')
+                .update({ current_session_state: sessionState })
+                .eq('id', request.campaignId);
+        }
+    } catch (err) {
+        console.error('Failed to update campaign mood and ambience state:', err);
+    }
+
+    // Detect and log any significant emotional moments
+    let detectedMoment = null;
+    try {
+        const momentState = await detectSignificantMoment(request.campaignId, narration);
+        if (momentState && momentState.isEmotional) {
+            const { createCampaignMemory } = await import('../services/memoryService');
+            detectedMoment = await createCampaignMemory(
+                request.campaignId,
+                momentState.summary!,
+                [],
+                true,
+                momentState.type
+            );
+        }
+    } catch (momentErr) {
+        console.error('Failed to analyze/create emotional memory moment:', momentErr);
+    }
+
     return {
         narration,
         usedFallback,
-        promptSummary: prompt.slice(0, 400)
+        promptSummary: prompt.slice(0, 400),
+        detectedMoment
     };
 };
 

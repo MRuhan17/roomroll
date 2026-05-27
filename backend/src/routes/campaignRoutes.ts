@@ -17,7 +17,8 @@ import {
     generateTavernHandler,
     chatWithNpcHandler,
     respondToFactionRecruitmentHandler,
-    triggerTavernEventHandler
+    triggerTavernEventHandler,
+    updateCampaignAmbienceHandler
 } from '../controllers/campaignController';
 import { authenticateRequest } from '../middleware/authMiddleware';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
@@ -38,6 +39,7 @@ router.post('/join', authenticateRequest, campaignLimiter, joinCampaignHandler);
 router.get('/active', authenticateRequest, campaignLimiter, getActiveCampaignHandler);
 router.get('/:campaignId', authenticateRequest, campaignLimiter, getCampaignHandler);
 router.put('/:campaignId', authenticateRequest, campaignLimiter, updateCampaignHandler);
+router.put('/:campaignId/ambience', authenticateRequest, campaignLimiter, updateCampaignAmbienceHandler);
 router.put('/:campaignId/pacing', authenticateRequest, campaignLimiter, updateCampaignPacingHandler);
 router.get('/:campaignId/snapshot', authenticateRequest, campaignLimiter, getCampaignSnapshotHandler);
 

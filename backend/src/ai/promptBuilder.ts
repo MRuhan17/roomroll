@@ -27,7 +27,14 @@ export const buildNarrationPrompt = (snapshot: CampaignSnapshot, playerAction: s
         .slice(0, 5)
         .map((event) => (event.content?.text as string) ?? '')
         .join(' ');
-    const memories = snapshot.memories.map((memory) => memory.summary).join(' ');
+    const sessionMemories = snapshot.memories
+        .filter((memory) => !(memory as any).is_emotional_moment)
+        .map((memory) => memory.summary)
+        .join(' ');
+    const emotionalMemories = snapshot.memories
+        .filter((memory) => (memory as any).is_emotional_moment)
+        .map((memory) => `[${(memory as any).moment_type || 'moment'}] ${memory.summary}`)
+        .join(' | ');
     const lore = snapshot.lore?.map(l => `${l.title}: ${l.content}`).join(' | ');
     const factions = snapshot.factions?.map(f => `${f.name}: ${f.description}`).join(' | ');
 
@@ -80,7 +87,8 @@ export const buildNarrationPrompt = (snapshot: CampaignSnapshot, playerAction: s
       `Players: ${members || 'unknown'}.`,
       `Active quests: ${quests || 'none'}.`,
       `World events: ${worldEvents || 'none'}.`,
-      `Memory: ${memories || 'none'}.`,
+      `Core memories: ${sessionMemories || 'none'}.`,
+      emotionalMemories ? `Historical Campaign Memories / Callbacks (Reference these past emotional callbacks naturally in your narration to build continuity): ${emotionalMemories}` : '',
       `Lore: ${lore || 'none'}.`,
       `Factions: ${factions || 'none'}.`,
       `Recent narration: ${recentNarration || 'none'}.`,
@@ -109,7 +117,14 @@ const buildBaseContext = (snapshot: CampaignSnapshot): string => {
     if (guidance.emotional_themes) guidanceParts.push(`Emotional Themes: ${guidance.emotional_themes}`);
     const guidanceStr = guidanceParts.join(' | ');
 
-    const memories = snapshot.memories.map((m) => m.summary).join('; ');
+    const sessionMemories = snapshot.memories
+        .filter((m) => !(m as any).is_emotional_moment)
+        .map((m) => m.summary)
+        .join('; ');
+    const emotionalMemories = snapshot.memories
+        .filter((m) => (m as any).is_emotional_moment)
+        .map((m) => `[${(m as any).moment_type || 'moment'}] ${m.summary}`)
+        .join(' | ');
     const npcs = snapshot.tokens.filter(t => t.token_type === 'npc' || t.token_type === 'boss').map(t => t.label).join(', ');
     const lore = snapshot.lore?.map(l => `${l.title}: ${l.content}`).join(' | ');
     const factions = snapshot.factions?.map(f => `${f.name}: ${f.description}`).join(' | ');
@@ -133,7 +148,8 @@ const buildBaseContext = (snapshot: CampaignSnapshot): string => {
         `Current Narrative Phase: ${narrativePhase} (Session ${completedSessions + 1} of ${targetSessions}) | Pacing Intensity: ${pacingIntensity}`,
         footnotes ? `Story Footnotes: ${footnotes}` : '',
         guidanceStr ? `DM Objectives: ${guidanceStr}` : '',
-        `Core Memories: ${memories || 'none'}`,
+        `Core Memories: ${sessionMemories || 'none'}`,
+        emotionalMemories ? `Historical Callbacks: ${emotionalMemories}` : '',
         `Present NPCs/Entities: ${npcs || 'none'}`,
         `Lore: ${lore || 'none'}`,
         `Factions: ${factions || 'none'}`

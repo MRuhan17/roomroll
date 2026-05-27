@@ -16,6 +16,7 @@ import { SocketEvents } from '../types/socket';
 import { DiceRollRequest } from '../types/dice';
 import { AuthUser } from '../types/auth';
 import { createLogger } from '../lib/logger';
+import { decodeCampaignId } from '../utils/campaignId';
 
 const logger = createLogger('socket');
 
@@ -69,8 +70,8 @@ export const registerSocketHandlers = (io: Server) => {
         const user = socket.data.user as AuthUser;
         logger.info('User connected', { userId: user.id, socketId: socket.id });
 
-        socket.on(SocketEvents.JoinCampaign, async (payload: { campaignId?: number }) => {
-            const campaignId = Number(payload?.campaignId);
+        socket.on(SocketEvents.JoinCampaign, async (payload: { campaignId?: number | string }) => {
+            const campaignId = decodeCampaignId(payload?.campaignId);
             logger.info('Joining campaign', { userId: user.id, campaignId });
             if (!campaignId) {
                 socket.emit(SocketEvents.Error, { message: 'campaignId required' });
@@ -127,6 +128,39 @@ export const registerSocketHandlers = (io: Server) => {
                 userId: user.id,
                 roll: storedRoll
             });
+
+            // Check for a famous dice roll (Natural 20 or Natural 1 on a d20)
+            if (storedRoll.dice_type === 'd20' && (storedRoll.result === 20 || storedRoll.result === 1)) {
+                try {
+                    const { createCampaignMemory } = await import('../services/memoryService');
+                    const { supabase: dbClient } = await import('../config/db');
+                    const rollLabel = storedRoll.result === 20 ? 'critical success' : 'critical failure';
+                    const contextStr = payload.context ? ` for "${payload.context}"` : '';
+                    
+                    // Fetch user display name
+                    const { data: userData } = await dbClient
+                        .from('users')
+                        .select('display_name')
+                        .eq('id', user.id)
+                        .single();
+                    const userName = userData?.display_name || `Player #${user.id}`;
+                    
+                    const summary = `${userName} rolled a legendary natural ${storedRoll.result} (${rollLabel})${contextStr}.`;
+                    const memory = await createCampaignMemory(
+                        campaignId,
+                        summary,
+                        [{ roll_id: storedRoll.id, result: storedRoll.result }],
+                        true,
+                        'famous_roll'
+                    );
+                    
+                    io.to(campaignRoom(campaignId)).emit(SocketEvents.NewMemoryMoment, {
+                        memory
+                    });
+                } catch (memoryErr) {
+                    logger.error('Failed to log famous roll memory:', { error: memoryErr });
+                }
+            }
         });
 
         socket.on(SocketEvents.TokenMoved, async (payload: { tokenId?: number; position?: { x: number; y: number; snapped?: boolean } }) => {
@@ -261,6 +295,18 @@ export const registerSocketHandlers = (io: Server) => {
                 text: narration.narration,
                 ai: true
             });
+            
+            // Broadcast the updated campaign state to sync the new mood/ambience
+            try {
+                const snapshot = await getCampaignSnapshot(campaignId);
+                const presence = presenceStore.join(campaignId, user.id, socket.id); // Get presence info
+                io.to(campaignRoom(campaignId)).emit(SocketEvents.CampaignState, {
+                    snapshot,
+                    onlineUserIds: presence.onlineUserIds
+                });
+            } catch (snapErr) {
+                logger.error('Failed to broadcast campaign state update after socket narration', { error: snapErr });
+            }
         });
 
         socket.on(SocketEvents.WorldEvent, async (payload: { title?: string; description?: string; status?: string }) => {

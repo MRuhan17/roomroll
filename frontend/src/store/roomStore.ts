@@ -6,6 +6,7 @@ import type {
   CampaignMap,
   CampaignMapToken,
   CampaignMember,
+  CampaignMemory,
   CampaignRole,
   CampaignSessionState,
   CampaignSnapshot,
@@ -30,6 +31,7 @@ interface RoomState {
   narrationFeed: NarrationEntry[];
   worldEvents: CampaignWorldEvent[];
   diceHistory: DiceRollRow[];
+  memories: CampaignMemory[];
   lastDiceRoll: LiveDiceRoll | null;
   typingUserIds: number[];
   aiPending: AiPendingState;
@@ -71,6 +73,7 @@ const createInitialState = () => ({
   narrationFeed: [] as NarrationEntry[],
   worldEvents: [] as CampaignWorldEvent[],
   diceHistory: [] as DiceRollRow[],
+  memories: [] as CampaignMemory[],
   lastDiceRoll: null as LiveDiceRoll | null,
   typingUserIds: [] as number[],
   aiPending: initialAiPending(),
@@ -314,6 +317,7 @@ export const useRoomStore = create<RoomState>((set) => ({
         narrationFeed,
         worldEvents: sortWorldEvents(snapshot.worldEvents),
         diceHistory: snapshot.diceHistory,
+        memories: snapshot.memories,
         lastDiceRoll,
         typingUserIds: state.typingUserIds.filter((userId) => nextOnlineUserIds.includes(userId)),
         lastError: null,

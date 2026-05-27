@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { decodeCampaignId } from '@/lib/campaignId';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,7 +18,7 @@ export function SessionRecapsPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const id = Number(campaignId);
+  const id = decodeCampaignId(campaignId);
 
   const [selectedRecap, setSelectedRecap] = useState<any | null>(null);
   const [regeneratingSessionId, setRegeneratingSessionId] = useState<string | null>(null);

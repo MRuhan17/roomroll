@@ -33,6 +33,8 @@ export interface CampaignSessionState {
     faction_conflicts?: string;
     emotional_themes?: string;
   };
+  mood?: string;
+  ambience?: string;
 }
 
 export interface Campaign {
@@ -92,6 +94,8 @@ export interface CampaignMemory {
   key_facts: Array<Record<string, unknown>> | null;
   created_at: string;
   updated_at: string;
+  is_emotional_moment?: boolean;
+  moment_type?: string;
 }
 
 export interface CharacterAbilityScores {

@@ -36,6 +36,7 @@ const SocketEvents = {
   TokenUpdated: "TOKEN_UPDATED",
   TokenDeleted: "TOKEN_DELETED",
   CombatTurn: "COMBAT_TURN",
+  NewMemoryMoment: "NEW_MEMORY_MOMENT",
 } as const;
 
 let socket: Socket | null = null;
@@ -176,6 +177,13 @@ function registerSocketListeners(activeSocket: Socket) {
 
   activeSocket.on(SocketEvents.CombatTurn, (payload: { tokenId?: number }) => {
     useRoomStore.getState().setActiveTurnTokenId(payload.tokenId ?? null);
+  });
+
+  activeSocket.on(SocketEvents.NewMemoryMoment, (payload: { memory?: any }) => {
+    if (payload.memory) {
+      const event = new CustomEvent("new-memory-moment", { detail: payload.memory });
+      window.dispatchEvent(event);
+    }
   });
 }
 

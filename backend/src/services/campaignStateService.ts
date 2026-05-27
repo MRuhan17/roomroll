@@ -80,20 +80,36 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .order('created_at', { ascending: false })
         .limit(20);
 
-    let memoriesQuery = supabase
-        .from('campaign_memories')
-        .select('*')
-        .eq('campaign_id', campaignId);
+    const memoriesPromise = (async () => {
+        try {
+            let memoriesQuery = supabase
+                .from('campaign_memories')
+                .select('*')
+                .eq('campaign_id', campaignId);
 
-    if (activeSessionId) {
-        memoriesQuery = memoriesQuery.eq('session_id', activeSessionId);
-    } else {
-        memoriesQuery = memoriesQuery.is('session_id', null);
-    }
-
-    const memoriesPromise = memoriesQuery
-        .order('updated_at', { ascending: false })
-        .limit(10);
+            if (activeSessionId) {
+                memoriesQuery = memoriesQuery.or(
+                    `session_id.eq.${activeSessionId},is_emotional_moment.eq.true`
+                );
+            } else {
+                memoriesQuery = memoriesQuery.or(
+                    `session_id.is.null,is_emotional_moment.eq.true`
+                );
+            }
+            
+            const res = await memoriesQuery.order('created_at', { ascending: false }).limit(30);
+            if (res.error) throw res.error;
+            return res;
+        } catch (err) {
+            console.warn('[DB] Standard memories query failed, running column-free fallback:', err);
+            return await supabase
+                .from('campaign_memories')
+                .select('*')
+                .eq('campaign_id', campaignId)
+                .order('created_at', { ascending: false })
+                .limit(100);
+        }
+    })();
 
     const lorePromise = supabase
         .from('campaign_lore_entries')
@@ -141,6 +157,34 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         tokens = (tokenResult.data ?? []) as MapToken[];
     }
 
+    const rawMemories = (memoriesResult.data ?? []) as CampaignMemory[];
+    
+    // Normalize and filter memories
+    const normalizedMemories = rawMemories.map(m => {
+        let isEmotional = (m as any).is_emotional_moment ?? false;
+        let momentType = (m as any).moment_type ?? null;
+        
+        if (!isEmotional && Array.isArray(m.key_facts)) {
+            const fallbackObj = m.key_facts.find((fact: any) => fact && fact._is_fallback === true);
+            if (fallbackObj) {
+                isEmotional = fallbackObj.is_emotional_moment ?? false;
+                momentType = fallbackObj.moment_type ?? null;
+            }
+        }
+        
+        return {
+            ...m,
+            is_emotional_moment: isEmotional,
+            moment_type: momentType
+        } as CampaignMemory;
+    });
+
+    const filteredMemories = normalizedMemories.filter(m => {
+        const isCurrentSession = activeSessionId ? m.session_id === activeSessionId : !m.session_id;
+        const isEmotional = (m as any).is_emotional_moment === true;
+        return isCurrentSession || isEmotional;
+    }).slice(0, 30);
+
     return {
         campaign,
         members: (membersResult.data ?? []) as CampaignMember[],
@@ -150,7 +194,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         worldEvents: (worldEventsResult.data ?? []) as CampaignWorldEvent[],
         recentEvents: (recentEventsResult.data ?? []) as CampaignEvent[],
         diceHistory: (diceHistoryResult.data ?? []) as DiceRollRow[],
-        memories: (memoriesResult.data ?? []) as CampaignMemory[],
+        memories: filteredMemories,
         characters,
         lore: (loreResult.data ?? []),
         factions: (factionsResult.data ?? [])

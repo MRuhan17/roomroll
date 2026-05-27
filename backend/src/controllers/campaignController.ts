@@ -661,3 +661,67 @@ export const triggerTavernEventHandler = async (req: Request, res: Response) => 
     }
 };
 
+export const updateCampaignAmbienceHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
+    }
+    const { mood, ambience } = req.body as { mood?: string; ambience?: string };
+    
+    try {
+        const { supabase } = await import('../config/db');
+        const { data: campaign, error: fetchErr } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', campaignId)
+            .single();
+            
+        if (fetchErr || !campaign) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+        
+        const state = campaign.current_session_state as any || {};
+        if (mood !== undefined) state.mood = mood;
+        if (ambience !== undefined) state.ambience = ambience;
+        
+        const { data: updatedCampaign, error: updateErr } = await supabase
+            .from('campaigns')
+            .update({ current_session_state: state })
+            .eq('id', campaignId)
+            .select('*')
+            .single();
+            
+        if (updateErr) {
+            return res.status(500).json({ message: 'Failed to update campaign ambience' });
+        }
+        
+        // Broadcast the updated campaign state to sync the new mood/ambience
+        try {
+            const { getCampaignSnapshot } = await import('../services/campaignStateService');
+            const { getIo } = await import('../socket');
+            const { SocketEvents } = await import('../types/socket');
+            
+            const snapshot = await getCampaignSnapshot(campaignId);
+            const io = getIo();
+            io.to(`campaign:${campaignId}`).emit(SocketEvents.CampaignState, {
+                snapshot
+            });
+        } catch (snapErr) {
+            console.error('Failed to broadcast campaign state update after manual transition:', snapErr);
+        }
+        
+        return res.json({ campaign: updatedCampaign });
+    } catch (err: any) {
+        console.error('Failed to transition campaign ambience:', err);
+        return res.status(500).json({ message: 'Failed to update campaign ambience' });
+    }
+};
+
