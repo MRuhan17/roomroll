@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createCampaign, getActiveCampaign, getCampaignSnapshot, joinCampaign } from "@/services/campaigns";
+import { createCampaign, getActiveCampaign, getCampaignSnapshot, getUserCampaigns, joinCampaign } from "@/services/campaigns";
 import { api, getApiErrorMessage } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { AmbientBackdrop, Embers } from "@/components/landing/LandingPrimitives";
@@ -33,6 +33,14 @@ export function CampaignDashboardPage() {
 
   const activeCampaignId = activeCampaignQuery.data?.campaign?.id;
 
+  const campaignsQuery = useQuery({
+    queryKey: ["userCampaigns"],
+    queryFn: getUserCampaigns,
+    retry: false,
+  });
+
+  const campaigns = campaignsQuery.data?.campaigns || [];
+
 
   const snapshotQuery = useQuery({
     queryKey: ["campaignSnapshot", activeCampaignId],
@@ -49,6 +57,7 @@ export function CampaignDashboardPage() {
       setCreateDesc("");
       setCreateWorld("");
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
+      queryClient.invalidateQueries({ queryKey: ["userCampaigns"] });
       navigate(`/campaigns/${encodeCampaignId(data.campaign.id)}/setup`);
     },
     onError: (error) => setFeedback(getApiErrorMessage(error, "Could not create campaign.")),
@@ -60,6 +69,7 @@ export function CampaignDashboardPage() {
       setFeedback(`Joined campaign "${data.campaign.name}".`);
       setJoinCode("");
       queryClient.invalidateQueries({ queryKey: ["activeCampaign"] });
+      queryClient.invalidateQueries({ queryKey: ["userCampaigns"] });
       navigate(`/campaigns/${encodeCampaignId(data.campaign.id)}/setup`);
     },
     onError: (error) => setFeedback(getApiErrorMessage(error, "Could not join campaign.")),
@@ -277,6 +287,86 @@ export function CampaignDashboardPage() {
               </CardContent>
             </Card>
           </motion.div>
+        )}
+      </div>
+
+      {/* World Chronicles Deck */}
+      <div className="space-y-6">
+        <h3 className="text-xl font-display font-bold text-[#f5efe2] flex items-center gap-3">
+          <BookOpen className="h-5 w-5 text-[#ab211f]" />
+          Your World Chronicles
+        </h3>
+        
+        {campaignsQuery.isLoading ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-36 rounded-xl border border-tavern-border/30 bg-black/40 animate-pulse" />
+            ))}
+          </div>
+        ) : campaignsQuery.error ? (
+          <div className="p-6 rounded-xl border border-red-900/40 bg-red-950/15 text-center space-y-3">
+            <p className="text-red-400 font-serif italic text-sm">Failed to consult active chronicles. Try checking your leyline connection.</p>
+            <Button size="sm" onClick={() => campaignsQuery.refetch()} className="bg-transparent border border-red-800 text-red-200">Retry Fetching</Button>
+          </div>
+        ) : campaigns && campaigns.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {campaigns.map((camp: any) => {
+              const isCurrent = camp.id === campaign?.id;
+              return (
+                <motion.div
+                  key={camp.id}
+                  whileHover={{ y: -2 }}
+                  className={`relative overflow-hidden rounded-xl border p-5 transition-all duration-300 flex flex-col justify-between ${
+                    isCurrent 
+                      ? "border-[#d5b45d] bg-[#d5b45d]/[0.02] shadow-[0_0_20px_rgba(213,180,93,0.15)]" 
+                      : "border-tavern-border/30 bg-black/35 hover:border-[#d5b45d]/40"
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <h4 className="text-lg font-display font-semibold text-[#f5efe2]">{camp.name}</h4>
+                      <p className="text-xs text-[#cbc3b5]/60 font-serif mt-1">World Type: <strong className="text-[#cbc3b5]">{camp.world_type || 'Classic Fantasy'}</strong></p>
+                    </div>
+                    {isCurrent && (
+                      <span className="text-[8px] font-mono uppercase bg-[#d5b45d]/20 text-[#d5b45d] border border-[#d5b45d]/30 px-2 py-0.5 rounded-full tracking-wider">Active Quest</span>
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-[#cbc3b5]/60 font-mono border-t border-tavern-border/10 pt-3">
+                    <div>👑 Host: <strong className="text-[#cbc3b5]">{camp.hostName}</strong></div>
+                    <div>👥 Party: <strong className="text-[#cbc3b5]">{camp.playerCount} members</strong></div>
+                    <div className="col-span-2 mt-1">⏳ Last Activity: <strong className="text-[#cbc3b5]">{new Date(camp.lastActivity).toLocaleDateString()}</strong></div>
+                  </div>
+
+                  <div className="mt-4 flex gap-2 justify-end pt-2 border-t border-tavern-border/10">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs bg-transparent border-tavern-border text-[#cbc3b5] hover:bg-white/5 font-display uppercase tracking-widest"
+                      onClick={() => navigate(`/campaigns/${encodeCampaignId(camp.id)}/setup`)}
+                    >
+                      Configure
+                    </Button>
+                    <Button
+                      size="sm"
+                      className={`h-8 text-xs font-display uppercase tracking-widest ${
+                        isCurrent 
+                          ? "bg-[#ab211f] hover:bg-[#8f1917] text-white" 
+                          : "bg-transparent border border-[#d5b45d]/40 text-[#d5b45d] hover:bg-[#d5b45d]/5"
+                      }`}
+                      onClick={() => navigate(`/rooms/${encodeCampaignId(camp.id)}`)}
+                    >
+                      {isCurrent ? "Resume Journey" : "Enter Session"}
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-[#cbc3b5]/40 font-serif italic text-sm border border-dashed border-tavern-border/30 rounded-xl bg-black/10">
+            No chronicles recorded. Use the scrolls below to forge a new campaign or join a party!
+          </div>
         )}
       </div>
 

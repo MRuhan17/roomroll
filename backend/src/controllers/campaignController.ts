@@ -84,6 +84,62 @@ export const getActiveCampaignHandler = async (req: Request, res: Response) => {
     return res.json({ campaign });
 };
 
+export const getUserCampaignsHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    try {
+        const { getUserCampaigns, listMembers } = await import('../services/campaignService');
+        const { getCampaignSnapshot } = await import('../services/campaignStateService');
+        const { supabase } = await import('../config/db');
+
+        const campaigns = await getUserCampaigns(user.id);
+
+        const enrichedCampaigns = await Promise.all(campaigns.map(async (camp) => {
+            try {
+                const members = await listMembers(camp.id);
+                const snapshot = await getCampaignSnapshot(camp.id);
+                const hostMember = members.find(m => m.role === 'DM');
+
+                let hostName = 'Dungeon Master';
+                if (hostMember) {
+                    const { data: hostUser } = await supabase
+                        .from('users')
+                        .select('display_name')
+                        .eq('id', hostMember.user_id)
+                        .maybeSingle();
+                    if (hostUser) {
+                        hostName = hostUser.display_name;
+                    }
+                }
+
+                return {
+                    ...camp,
+                    playerCount: members.length,
+                    hostName,
+                    lastActivity: snapshot.recentEvents?.[0]?.created_at || camp.created_at,
+                    activeSessionState: camp.current_session_state
+                };
+            } catch (err) {
+                console.error(`Failed to enrich campaign ${camp.id}:`, err);
+                return {
+                    ...camp,
+                    playerCount: 1,
+                    hostName: 'Dungeon Master',
+                    lastActivity: camp.created_at,
+                    activeSessionState: camp.current_session_state
+                };
+            }
+        }));
+
+        return res.json({ campaigns: enrichedCampaigns });
+    } catch (error) {
+        console.error('Failed to get user campaigns:', error);
+        return res.status(500).json({ message: 'Failed to retrieve campaigns' });
+    }
+};
+
 export const getCampaignHandler = async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) {

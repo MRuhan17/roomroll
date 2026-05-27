@@ -146,3 +146,8 @@ export async function updateCampaignAmbience(campaignId: number, mood?: string, 
   return res.data;
 }
 
+export async function getUserCampaigns() {
+  const res = await api.get<{ campaigns: any[] }>("/api/campaigns");
+  return res.data;
+}
+

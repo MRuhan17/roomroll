@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
     createCampaignHandler,
     getActiveCampaignHandler,
+    getUserCampaignsHandler,
     getCampaignHandler,
     getCampaignSnapshotHandler,
     joinCampaignHandler,
@@ -34,6 +35,7 @@ const campaignLimiter = rateLimit({
     message: { message: 'Too many requests' }
 });
 
+router.get('/', authenticateRequest, campaignLimiter, getUserCampaignsHandler);
 router.post('/', authenticateRequest, campaignLimiter, createCampaignHandler);
 router.post('/join', authenticateRequest, campaignLimiter, joinCampaignHandler);
 router.get('/active', authenticateRequest, campaignLimiter, getActiveCampaignHandler);
