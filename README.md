@@ -75,7 +75,8 @@ Recommended backend variables:
 
 Recommended frontend variables:
 
-- `VITE_API_BASE_URL`: backend base URL, usually `http://localhost:5000`
+- `VITE_API_URL`: backend API base URL, usually `http://localhost:5000`
+- `VITE_SOCKET_URL`: backend socket URL, usually `http://localhost:5000`
 
 The backend also accepts the legacy `NEXT_PUBLIC_SUPABASE_*` names for compatibility with the current local setup.
 
