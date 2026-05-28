@@ -118,7 +118,7 @@ export const getUserCampaignsHandler = async (req: Request, res: Response) => {
                     ...camp,
                     playerCount: members.length,
                     hostName,
-                    lastActivity: snapshot.recentEvents?.[0]?.created_at || camp.created_at,
+                    lastActivity: camp.last_played_at || snapshot.recentEvents?.[0]?.created_at || camp.created_at,
                     activeSessionState: camp.current_session_state
                 };
             } catch (err) {
@@ -127,7 +127,7 @@ export const getUserCampaignsHandler = async (req: Request, res: Response) => {
                     ...camp,
                     playerCount: 1,
                     hostName: 'Dungeon Master',
-                    lastActivity: camp.created_at,
+                    lastActivity: camp.last_played_at || camp.created_at,
                     activeSessionState: camp.current_session_state
                 };
             }
@@ -545,6 +545,37 @@ export const generateSessionRecapHandler = async (req: Request, res: Response) =
     }
 };
 
+export const recoverSessionHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    const sessionId = req.params.sessionId as string;
+    if (!campaignId || !sessionId) {
+        return res.status(400).json({ message: 'Campaign ID and Session ID are required' });
+    }
+    
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required to recover session state' });
+    }
+
+    try {
+        const { recoverSessionState } = await import('../services/sessionService');
+        const snapshot = await recoverSessionState(campaignId, sessionId);
+        
+        // Broadcast session state recovery to all connected clients in real-time
+        const { broadcastToRoom } = await import('../realtime/roomState');
+        broadcastToRoom(String(campaignId), 'SESSION_RECOVERED', { sessionId, snapshot });
+        
+        return res.json({ message: 'Campaign state successfully rolled back to session snapshot.', snapshot });
+    } catch (error: any) {
+        console.error('Failed to recover session state:', error);
+        return res.status(500).json({ message: error.message || 'Failed to rollback campaign state.' });
+    }
+};
+
 export const updateCampaignPacingHandler = async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) {
@@ -608,6 +639,10 @@ export const getTavernHandler = async (req: Request, res: Response) => {
     if (!campaignId) {
         return res.status(400).json({ message: 'Campaign ID required' });
     }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
+    }
     try {
         const { getOrGenerateTavern } = await import('../services/tavernService');
         const tavern = await getOrGenerateTavern(campaignId);
@@ -626,6 +661,10 @@ export const generateTavernHandler = async (req: Request, res: Response) => {
     const campaignId = Number(req.params.campaignId);
     if (!campaignId) {
         return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
     }
     try {
         const { generateProceduralTavern } = await import('../services/tavernService');
@@ -666,6 +705,10 @@ export const chatWithNpcHandler = async (req: Request, res: Response) => {
     if (!campaignId || !npcId || !message) {
         return res.status(400).json({ message: 'Campaign ID, NPC ID, and message are required' });
     }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
+    }
     try {
         const { chatWithNpc } = await import('../services/tavernService');
         const result = await chatWithNpc(campaignId, npcId, message, user.id);
@@ -688,6 +731,10 @@ export const respondToFactionRecruitmentHandler = async (req: Request, res: Resp
     if (!campaignId || !encounterId || !action) {
         return res.status(400).json({ message: 'Campaign ID, encounter ID, and action are required' });
     }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
+    }
     try {
         const { respondToFactionRecruitment } = await import('../services/tavernService');
         const tavern = await respondToFactionRecruitment(campaignId, encounterId, action);
@@ -706,6 +753,10 @@ export const triggerTavernEventHandler = async (req: Request, res: Response) => 
     const campaignId = Number(req.params.campaignId);
     if (!campaignId) {
         return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
     }
     try {
         const { triggerTavernEvent } = await import('../services/tavernService');
@@ -778,6 +829,280 @@ export const updateCampaignAmbienceHandler = async (req: Request, res: Response)
     } catch (err: any) {
         console.error('Failed to transition campaign ambience:', err);
         return res.status(500).json({ message: 'Failed to update campaign ambience' });
+    }
+};
+
+export const detectDerailmentHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'Only the Dungeon Master can access panic/recovery tools.' });
+    }
+    try {
+        const { detectDerailment } = await import('../ai/aiService');
+        const detection = await detectDerailment(campaignId);
+        return res.json(detection);
+    } catch (err: any) {
+        console.error('Failed to detect derailment:', err);
+        return res.status(500).json({ message: 'Failed to analyze derailment situation' });
+    }
+};
+
+export const generateRecoveryPathsHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'Only the Dungeon Master can access panic/recovery tools.' });
+    }
+    const { derailmentContext } = req.body as { derailmentContext?: string };
+    if (!derailmentContext) {
+        return res.status(400).json({ message: 'Derailment context is required.' });
+    }
+    try {
+        const { generateRecoveryPaths } = await import('../ai/aiService');
+        const recoveryPaths = await generateRecoveryPaths(campaignId, derailmentContext);
+        
+        // Save the generated recovery paths in session state
+        const { supabase } = await import('../config/db');
+        const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', campaignId)
+            .single();
+            
+        const state = campaignData?.current_session_state as any || {};
+        state.panic_recovery_paths = recoveryPaths;
+        state.last_derailment_context = derailmentContext;
+        
+        await supabase
+            .from('campaigns')
+            .update({ current_session_state: state })
+            .eq('id', campaignId);
+            
+        return res.json({ recoveryPaths });
+    } catch (err: any) {
+        console.error('Failed to generate recovery paths:', err);
+        return res.status(500).json({ message: 'Failed to generate emergency recovery paths' });
+    }
+};
+
+export const getSavedRecoveryPathsHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'Only the Dungeon Master can access panic/recovery tools.' });
+    }
+    try {
+        const { supabase } = await import('../config/db');
+        const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', campaignId)
+            .single();
+            
+        const state = campaignData?.current_session_state as any || {};
+        return res.json({ 
+            recoveryPaths: state.panic_recovery_paths || [],
+            lastDerailmentContext: state.last_derailment_context || null
+        });
+    } catch (err: any) {
+        console.error('Failed to fetch saved recovery paths:', err);
+        return res.status(500).json({ message: 'Failed to retrieve recovery paths' });
+    }
+};
+
+export const applyRecoveryPathHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'Only the Dungeon Master can access panic/recovery tools.' });
+    }
+
+    const { 
+        questTitle, 
+        questDescription, 
+        questObjective, 
+        npcName, 
+        npcDescription, 
+        npcDialogueStarter, 
+        narrationText 
+    } = req.body as {
+        questTitle?: string;
+        questDescription?: string;
+        questObjective?: string;
+        npcName?: string;
+        npcDescription?: string;
+        npcDialogueStarter?: string;
+        narrationText?: string;
+    };
+
+    try {
+        const { supabase } = await import('../config/db');
+        const { getCampaignSnapshot } = await import('../services/campaignStateService');
+        const { getIo } = await import('../socket');
+        const { SocketEvents } = await import('../types/socket');
+
+        // 1. Create the alternate quest if provided
+        if (questTitle) {
+            const { upsertQuest } = await import('../services/questService');
+            await upsertQuest({
+                campaignId,
+                title: questTitle,
+                description: questDescription ? `${questDescription}\nObjective: ${questObjective || ''}` : `Objective: ${questObjective || ''}`,
+                status: 'active'
+            });
+        }
+
+        // 2. Create memory moment for the emergency NPC
+        if (npcName) {
+            const { createCampaignMemory } = await import('../services/memoryService');
+            await createCampaignMemory(campaignId, `Emergency NPC introduced: ${npcName} - ${npcDescription || ''}`, [
+                { type: 'npc_relationship', npc: npcName, memory: npcDescription || 'Discovered during emergency recovery' }
+            ]);
+
+            // Add NPC token to the active map if there is one
+            const snapshot = await getCampaignSnapshot(campaignId);
+            if (snapshot.activeMap) {
+                await supabase
+                    .from('map_tokens')
+                    .insert([{
+                        campaign_id: campaignId,
+                        map_id: snapshot.activeMap.id,
+                        token_type: 'npc',
+                        label: npcName,
+                        hp_current: 10,
+                        hp_max: 10,
+                        position: { x: 150, y: 150 },
+                        is_hidden: false
+                    }]);
+            }
+        }
+
+        // 3. Broadcast narration event if provided
+        if (narrationText) {
+            const { createCampaignEvent } = await import('../services/eventService');
+            const { appendNarrationLog } = await import('../services/memoryService');
+
+            await createCampaignEvent(
+                campaignId,
+                'NEW_NARRATION',
+                { text: narrationText, playerAction: 'DM Panic Button Recovery Applied', tone: 'dramatic' },
+                user.id
+            );
+
+            await appendNarrationLog(campaignId, {
+                created_at: new Date().toISOString(),
+                content: narrationText,
+                created_by: user.id
+            });
+
+            const io = getIo();
+            io.to(`campaign:${campaignId}`).emit(SocketEvents.NewNarration, {
+                userId: user.id,
+                text: narrationText,
+                ai: true
+            });
+        }
+
+        // 4. Update the campaign state current_session_state to clear or mark recovery paths
+        const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', campaignId)
+            .single();
+            
+        const state = campaignData?.current_session_state as any || {};
+        state.panic_recovery_paths = [];
+        state.last_derailment_context = null;
+        
+        await supabase
+            .from('campaigns')
+            .update({ current_session_state: state })
+            .eq('id', campaignId);
+
+        // 5. Broadcast the updated campaign state to sync everyone
+        const updatedSnapshot = await getCampaignSnapshot(campaignId);
+        const io = getIo();
+        io.to(`campaign:${campaignId}`).emit(SocketEvents.CampaignState, {
+            snapshot: updatedSnapshot
+        });
+
+        return res.json({ success: true, message: 'Recovery path successfully applied and synced across all tables.' });
+    } catch (err: any) {
+        console.error('Failed to apply recovery path:', err);
+        return res.status(500).json({ message: 'Failed to apply recovery elements to the campaign' });
+    }
+};
+
+export const getHallOfLegendsHandler = async (req: Request, res: Response) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const campaignId = Number(req.params.campaignId);
+    if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign ID required' });
+    }
+    const member = await getMember(campaignId, user.id);
+    if (!member) {
+        return res.status(403).json({ message: 'Not a campaign member' });
+    }
+    try {
+        const { supabase: dbClient } = await import('../config/db');
+        const { data, error } = await dbClient
+            .from('dice_rolls')
+            .select('*')
+            .eq('campaign_id', campaignId)
+            .or('classification->>tier.eq.critical,classification->>tier.eq.legendary')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        // Enrich rolls with user display names
+        const enrichedData = await Promise.all((data || []).map(async (roll: any) => {
+            const { data: userData } = await dbClient
+                .from('users')
+                .select('display_name')
+                .eq('id', roll.user_id)
+                .maybeSingle();
+            return {
+                ...roll,
+                userName: userData?.display_name || `Hero #${roll.user_id}`
+            };
+        }));
+
+        return res.json({ legends: enrichedData });
+    } catch (err: any) {
+        console.error('Failed to get Hall of Legends:', err);
+        return res.status(500).json({ message: 'Failed to retrieve Hall of Legends' });
     }
 };
 

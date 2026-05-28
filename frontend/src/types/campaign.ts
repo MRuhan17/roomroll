@@ -264,6 +264,12 @@ export interface DiceRollRow {
   total: number;
   advantage_state: AdvantageState;
   context: string | null;
+  classification?: {
+    tier: 'standard' | 'impactful' | 'critical' | 'legendary';
+    emotionalMoment?: string | null;
+    isLegendary: boolean;
+  } | null;
+  narration?: string | null;
   created_at: string;
 }
 
@@ -314,6 +320,12 @@ export interface LiveDiceRoll {
   context?: string | null;
   isCriticalSuccess: boolean;
   isCriticalFail: boolean;
+  classification?: {
+    tier: 'standard' | 'impactful' | 'critical' | 'legendary';
+    emotionalMoment?: string | null;
+    isLegendary: boolean;
+  } | null;
+  narration?: string | null;
 }
 
 export interface AiPendingState {

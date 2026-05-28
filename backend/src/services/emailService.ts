@@ -181,7 +181,10 @@ export const sendWeeklyChronicles = async (): Promise<{ sentCount: number; logge
 // Keep track of sent test emails in the current runtime session to prevent duplicates
 const sentTestEmailsThisSession = new Set<string>();
 
-export const sendTestChronicle = async (): Promise<{
+export const sendTestChronicle = async (
+    userId?: number,
+    ipAddress?: string
+): Promise<{
     sentCount: number;
     failedCount: number;
     duplicateCount: number;
@@ -219,6 +222,21 @@ export const sendTestChronicle = async (): Promise<{
             duplicateCount++;
             details.push({ email: recipientEmail, status: 'duplicate' });
             continue;
+        }
+
+        // 3. Enforce production allowlist filtering
+        if (process.env.NODE_ENV === 'production') {
+            const isAllowlisted = recipientEmail.endsWith('@roomroll.co.in') || recipientEmail === 'admin@roomroll.co.in';
+            if (!isAllowlisted) {
+                logger.warn(`Skipping non-allowlisted email recipient in production: ${recipientEmail}`);
+                failedCount++;
+                details.push({
+                    email: recipientEmail,
+                    status: 'failed',
+                    error: 'Domain not allowlisted in production environment'
+                });
+                continue;
+            }
         }
 
         // Build premium, styled fantasy newsletter
@@ -324,5 +342,28 @@ export const sendTestChronicle = async (): Promise<{
     }
 
     logger.info(`Manual admin test chronicle delivery complete. Sent: ${sentCount}, Failed: ${failedCount}, Duplicates: ${duplicateCount}`);
+
+    // Persistent audit log recording
+    try {
+        const auditLogDir = path.join(__dirname, '../../scratch');
+        if (!fs.existsSync(auditLogDir)) {
+            fs.mkdirSync(auditLogDir, { recursive: true });
+        }
+        const auditLogPath = path.join(auditLogDir, 'email_audit.log');
+        const logLine = JSON.stringify({
+            timestamp: new Date().toISOString(),
+            userId: userId || 'unknown',
+            ipAddress: ipAddress || 'unknown',
+            totalUsers: users.length,
+            sentCount,
+            failedCount,
+            duplicateCount
+        }) + '\n';
+        fs.appendFileSync(auditLogPath, logLine, 'utf8');
+        logger.info(`Successfully recorded audit log in scratch/email_audit.log`);
+    } catch (auditErr) {
+        logger.error('Failed to write email audit log:', { error: auditErr });
+    }
+
     return { sentCount, failedCount, duplicateCount, details };
 };

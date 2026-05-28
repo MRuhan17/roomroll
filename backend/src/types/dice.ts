@@ -31,5 +31,11 @@ export interface DiceRollRow {
     total: number;
     advantage_state: AdvantageState;
     context: string | null;
+    classification?: {
+        tier: 'standard' | 'impactful' | 'critical' | 'legendary';
+        emotionalMoment?: 'clutch_save' | 'near_death_recovery' | 'betrayal' | 'final_blow' | 'impossible_success' | 'devastating_failure' | 'campaign_defining' | null;
+        isLegendary: boolean;
+    } | null;
+    narration?: string | null;
     created_at: string;
 }

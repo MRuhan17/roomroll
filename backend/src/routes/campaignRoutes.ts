@@ -19,10 +19,18 @@ import {
     chatWithNpcHandler,
     respondToFactionRecruitmentHandler,
     triggerTavernEventHandler,
-    updateCampaignAmbienceHandler
+    updateCampaignAmbienceHandler,
+    detectDerailmentHandler,
+    generateRecoveryPathsHandler,
+    getSavedRecoveryPathsHandler,
+    applyRecoveryPathHandler,
+    recoverSessionHandler,
+    getHallOfLegendsHandler
 } from '../controllers/campaignController';
 import { authenticateRequest } from '../middleware/authMiddleware';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { campaignCreationLimiter } from '../middleware/rateLimiter';
+import { validateBody, campaignSchema, inviteCodeSchema } from '../middleware/validationMiddleware';
 
 const router = Router();
 
@@ -36,8 +44,8 @@ const campaignLimiter = rateLimit({
 });
 
 router.get('/', authenticateRequest, campaignLimiter, getUserCampaignsHandler);
-router.post('/', authenticateRequest, campaignLimiter, createCampaignHandler);
-router.post('/join', authenticateRequest, campaignLimiter, joinCampaignHandler);
+router.post('/', authenticateRequest, campaignCreationLimiter, validateBody(campaignSchema), createCampaignHandler);
+router.post('/join', authenticateRequest, campaignLimiter, validateBody(inviteCodeSchema), joinCampaignHandler);
 router.get('/active', authenticateRequest, campaignLimiter, getActiveCampaignHandler);
 router.get('/:campaignId', authenticateRequest, campaignLimiter, getCampaignHandler);
 router.put('/:campaignId', authenticateRequest, campaignLimiter, updateCampaignHandler);
@@ -54,6 +62,8 @@ router.put('/:campaignId/story-prep/points/:pointId', authenticateRequest, campa
 // Session Recap Endpoints
 router.get('/:campaignId/sessions/recaps', authenticateRequest, campaignLimiter, getSessionRecapsHandler);
 router.post('/:campaignId/sessions/:sessionId/recap/generate', authenticateRequest, campaignLimiter, generateSessionRecapHandler);
+router.post('/:campaignId/sessions/:sessionId/recover', authenticateRequest, campaignLimiter, recoverSessionHandler);
+router.get('/:campaignId/legends', authenticateRequest, campaignLimiter, getHallOfLegendsHandler);
 
 // Tavern Endpoints
 router.get('/:campaignId/tavern', authenticateRequest, campaignLimiter, getTavernHandler);
@@ -61,5 +71,11 @@ router.post('/:campaignId/tavern/generate', authenticateRequest, campaignLimiter
 router.post('/:campaignId/tavern/npcs/:npcId/chat', authenticateRequest, campaignLimiter, chatWithNpcHandler);
 router.post('/:campaignId/tavern/factions/:encounterId/respond', authenticateRequest, campaignLimiter, respondToFactionRecruitmentHandler);
 router.post('/:campaignId/tavern/events/trigger', authenticateRequest, campaignLimiter, triggerTavernEventHandler);
+
+// Panic / Recovery Endpoints
+router.get('/:campaignId/panic/detect', authenticateRequest, campaignLimiter, detectDerailmentHandler);
+router.post('/:campaignId/panic/recover', authenticateRequest, campaignLimiter, generateRecoveryPathsHandler);
+router.get('/:campaignId/panic/saved', authenticateRequest, campaignLimiter, getSavedRecoveryPathsHandler);
+router.post('/:campaignId/panic/apply', authenticateRequest, campaignLimiter, applyRecoveryPathHandler);
 
 export default router;

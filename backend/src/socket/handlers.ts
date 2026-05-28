@@ -3,7 +3,7 @@ import { verifyToken } from '../services/authService';
 import { presenceStore } from '../campaign-engine/presenceStore';
 import { getCampaignSnapshot } from '../services/campaignStateService';
 import { getMember } from '../services/campaignService';
-import { isDiceType, rollDice, storeDiceRoll } from '../services/diceService';
+import { isDiceType, rollDice, storeDiceRoll, classifyRollImpact } from '../services/diceService';
 import { createToken, moveToken, updateToken, deleteToken } from '../services/tokenService';
 import { updateRevealState } from '../services/mapService';
 import { createCampaignEvent } from '../services/eventService';
@@ -85,6 +85,7 @@ export const registerSocketHandlers = (io: Server) => {
             leaveCampaignRoom(socket, io);
             socket.join(campaignRoom(campaignId));
             socket.data.campaignId = campaignId;
+            socket.data.role = member.role; // Store role for authorization checks
 
             const presence = presenceStore.join(campaignId, user.id, socket.id);
             if (presence.changed) {
@@ -122,20 +123,49 @@ export const registerSocketHandlers = (io: Server) => {
                 return;
             }
             const roll = rollDice(payload);
-            const storedRoll = await storeDiceRoll(campaignId, user.id, roll, payload.context);
-            await createCampaignEvent(campaignId, 'DICE_ROLLED', { roll: storedRoll }, user.id);
+            
+            // Fetch campaign snapshot to enrich roll with class/species/combat-stakes context
+            const snapshot = await getCampaignSnapshot(campaignId);
+            const classification = classifyRollImpact(roll, payload.context, snapshot);
+            const character = snapshot.characters.find(c => c.user_id === user.id);
+            
+            let narration = '';
+            if (classification.tier !== 'standard') {
+                try {
+                    const { generateCinematicRollNarration } = await import('../ai/aiService');
+                    narration = await generateCinematicRollNarration(
+                        snapshot,
+                        character?.name || '',
+                        character?.class_name || '',
+                        character?.species || '',
+                        {
+                            diceType: roll.diceType,
+                            result: roll.result,
+                            total: roll.total,
+                            modifier: roll.modifier
+                        },
+                        classification,
+                        (snapshot.campaign?.current_session_state as any)?.tone
+                    );
+                } catch (err) {
+                    logger.error('Failed to generate cinematic roll narration:', { error: err });
+                }
+            }
+
+            const storedRoll = await storeDiceRoll(campaignId, user.id, roll, payload.context, classification, narration);
+            await createCampaignEvent(campaignId, 'DICE_ROLLED', { roll: storedRoll, classification, narration } as any, user.id);
             io.to(campaignRoom(campaignId)).emit(SocketEvents.DiceRolled, {
                 userId: user.id,
-                roll: storedRoll
+                roll: storedRoll,
+                classification,
+                narration
             });
 
-            // Check for a famous dice roll (Natural 20 or Natural 1 on a d20)
-            if (storedRoll.dice_type === 'd20' && (storedRoll.result === 20 || storedRoll.result === 1)) {
+            // Persist emotional/critical moments in the campaign history log
+            if (classification.tier === 'critical' || classification.tier === 'legendary') {
                 try {
                     const { createCampaignMemory } = await import('../services/memoryService');
                     const { supabase: dbClient } = await import('../config/db');
-                    const rollLabel = storedRoll.result === 20 ? 'critical success' : 'critical failure';
-                    const contextStr = payload.context ? ` for "${payload.context}"` : '';
                     
                     // Fetch user display name
                     const { data: userData } = await dbClient
@@ -145,11 +175,16 @@ export const registerSocketHandlers = (io: Server) => {
                         .single();
                     const userName = userData?.display_name || `Player #${user.id}`;
                     
-                    const summary = `${userName} rolled a legendary natural ${storedRoll.result} (${rollLabel})${contextStr}.`;
+                    const rollLabel = storedRoll.result === 20 ? 'critical success' : 
+                                      storedRoll.result === 1 ? 'critical failure' : 
+                                      classification.tier;
+                    const contextStr = payload.context ? ` for "${payload.context}"` : '';
+                    
+                    const summary = `${userName} made a ${classification.tier} roll of ${storedRoll.total} (${rollLabel})${contextStr}. ${narration || ''}`;
                     const memory = await createCampaignMemory(
                         campaignId,
                         summary,
-                        [{ roll_id: storedRoll.id, result: storedRoll.result }],
+                        [{ roll_id: storedRoll.id, result: storedRoll.result, total: storedRoll.total, tier: classification.tier }],
                         true,
                         'famous_roll'
                     );
@@ -255,6 +290,10 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.mapId || !payload?.revealState) {
                 return;
             }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             const map = await updateRevealState(campaignId, payload.mapId, payload.revealState);
             io.to(campaignRoom(campaignId)).emit(SocketEvents.MapRevealed, {
                 userId: user.id,
@@ -314,6 +353,10 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.title) {
                 return;
             }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             const event = await createWorldEvent({
                 campaignId,
                 title: payload.title,
@@ -330,6 +373,10 @@ export const registerSocketHandlers = (io: Server) => {
         socket.on(SocketEvents.RequestAiWorldEvent, async () => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId) return;
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             try {
                 const aiEvent = await generateAiWorldEvent(campaignId, user.id);
                 const event = await createWorldEvent({
@@ -351,12 +398,20 @@ export const registerSocketHandlers = (io: Server) => {
         socket.on('UPDATE_NPC_RELATIONSHIP', async (payload: { npcName?: string; context?: string }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId || !payload?.npcName || !payload?.context) return;
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             await updateNpcRelationship(campaignId, payload.npcName, payload.context);
         });
 
         socket.on(SocketEvents.QuestUpdated, async (payload: { questId?: number; title?: string; description?: string; status?: string; progress?: Record<string, unknown> }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId || !payload?.title) {
+                return;
+            }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
                 return;
             }
             const quest = await upsertQuest({
@@ -378,6 +433,10 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId) {
                 return;
             }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             const state = await startSession(campaignId, user.id);
             io.to(campaignRoom(campaignId)).emit(SocketEvents.SessionStarted, {
                 userId: user.id,
@@ -388,6 +447,10 @@ export const registerSocketHandlers = (io: Server) => {
         socket.on(SocketEvents.SessionEnded, async (payload: { summary?: string }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId) {
+                return;
+            }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
                 return;
             }
             const state = await endSession(campaignId, user.id, payload?.summary);

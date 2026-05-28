@@ -22,20 +22,30 @@ export const getWorldData = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        // Fetch lore
-        const { data: lore, error: loreError } = await supabase
+        // Fetch lore with campaign isolation filtering (hidden for players)
+        let loreQuery = supabase
             .from('campaign_lore_entries')
             .select('*')
             .eq('campaign_id', campaignId);
             
+        if (member.role === 'player') {
+            loreQuery = loreQuery.or('is_secret.eq.false,is_discovered.eq.true');
+        }
+        
+        const { data: lore, error: loreError } = await loreQuery;
         if (loreError) throw loreError;
 
-        // Fetch factions
-        const { data: factions, error: factionsError } = await supabase
+        // Fetch factions with campaign isolation filtering (hidden for players)
+        let factionsQuery = supabase
             .from('campaign_factions')
             .select('*')
             .eq('campaign_id', campaignId);
+            
+        if (member.role === 'player') {
+            factionsQuery = factionsQuery.eq('is_discovered', true);
+        }
 
+        const { data: factions, error: factionsError } = await factionsQuery;
         if (factionsError) throw factionsError;
 
         // Fetch events/discoveries (timeline)

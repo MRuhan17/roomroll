@@ -8,6 +8,7 @@ export interface Campaign {
     active_map_id: number | null;
     current_session_state: CampaignSessionState | null;
     created_at: string;
+    last_played_at?: string;
 }
 
 export interface CampaignSessionState {

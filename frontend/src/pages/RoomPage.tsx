@@ -27,7 +27,12 @@ import {
   Plus,
   History,
   Flame,
-  Play
+  Play,
+  AlertOctagon,
+  Skull,
+  ShieldAlert,
+  ScrollText,
+  Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -39,7 +44,11 @@ import {
   getSessionRecaps,
   generateSessionRecap,
   updateCampaignPacing,
-  updateCampaignAmbience
+  updateCampaignAmbience,
+  detectDerailment,
+  generateRecoveryPaths,
+  getSavedRecoveryPaths,
+  applyRecoveryPath
 } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
 import { SocketEvents, connectSocket, disconnectSocket, getSocket } from "@/services/socket";
@@ -118,11 +127,11 @@ function getWorldEventStatusClass(status: string) {
 function getSessionStatusClass(status?: string) {
   switch (status) {
     case "active":
-      return "bg-emerald-500/10 text-emerald-300";
+      return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]";
     case "ended":
-      return "tavern-card text-[#cbc3b5]/70";
+      return "tavern-card text-[#cbc3b5]/70 border border-tavern-border/50";
     default:
-      return "bg-amber-500/10 text-amber-300";
+      return "bg-amber-500/10 text-amber-300 border border-amber-500/20";
   }
 }
 
@@ -233,6 +242,12 @@ export function RoomPage() {
     type: string;
     result: number | null;
     actor: string;
+    classification?: {
+      tier: 'standard' | 'impactful' | 'critical' | 'legendary';
+      emotionalMoment?: string | null;
+      isLegendary: boolean;
+    } | null;
+    narration?: string | null;
   }>({
     active: false,
     type: "",
@@ -240,6 +255,28 @@ export function RoomPage() {
     actor: "",
   });
   const [cinematicNarrationId, setCinematicNarrationId] = useState<string | null>(null);
+  const [floatingReactions, setFloatingReactions] = useState<Array<{ id: number; emoji: string; left: number; }>>([]);
+
+  const triggerFloatingReaction = (emoji: string) => {
+    const newReaction = {
+      id: Date.now() + Math.random(),
+      emoji,
+      left: Math.floor(Math.random() * 60) + 20, // 20% to 80% screen width
+    };
+    setFloatingReactions((prev) => [...prev, newReaction]);
+    setTimeout(() => {
+      setFloatingReactions((prev) => prev.filter((r) => r.id !== newReaction.id));
+    }, 2000);
+  };
+
+  const handleSendReaction = (emoji: string) => {
+    const activeCampaignId = snapshotQuery.data?.snapshot?.campaign?.id;
+    const socket = getSocket();
+    if (activeCampaignId && socket) {
+      socket.emit('DICE_ROLL_REACTION', { campaignId: activeCampaignId, emoji });
+    }
+    triggerFloatingReaction(emoji);
+  };
   const [showEventOverlay, setShowEventOverlay] = useState<string | null>(null);
   const [connectionQuality, setConnectionQuality] = useState<"excellent" | "poor" | "offline">("offline");
 
@@ -293,6 +330,16 @@ export function RoomPage() {
 
   const [soundtrackPlaying, setSoundtrackPlaying] = useState(true);
   const [transitioningAmbience, setTransitioningAmbience] = useState(false);
+  
+  // DM Panic & Recovery System States
+  const [panicPanelOpen, setPanicPanelOpen] = useState(false);
+  const [derailmentContext, setDerailmentContext] = useState("");
+  const [panicLoading, setPanicLoading] = useState(false);
+  const [detectingDerailment, setDetectingDerailment] = useState(false);
+  const [recoveryPaths, setRecoveryPaths] = useState<any[]>([]);
+  const [activeRecoveryTab, setActiveRecoveryTab] = useState<number>(0);
+  const [detectionResult, setDetectionResult] = useState<{ is_derailment: boolean; severity: string; situation_title: string | null; description: string | null } | null>(null);
+  const [applyLoading, setApplyLoading] = useState(false);
   
   const [deckTab, setDeckTab] = useState<'narration' | 'flashbacks'>('narration');
 
@@ -474,9 +521,99 @@ export function RoomPage() {
     }
   };
 
+  const fetchSavedPanicRecovery = async () => {
+    if (!campaignId) return;
+    try {
+      const data = await getSavedRecoveryPaths(campaignId);
+      setRecoveryPaths(data.recoveryPaths || []);
+      if (data.lastDerailmentContext) {
+        setDerailmentContext(data.lastDerailmentContext);
+      }
+    } catch (err) {
+      console.error("Failed to load saved panic recovery:", err);
+    }
+  };
+
+  const handleDetectDerailment = async () => {
+    if (!campaignId) return;
+    try {
+      setDetectingDerailment(true);
+      setDetectionResult(null);
+      const data = await detectDerailment(campaignId);
+      setDetectionResult(data);
+      if (data.is_derailment && data.description) {
+        setDerailmentContext(data.description);
+      }
+    } catch (err) {
+      console.error("Failed to detect derailment:", err);
+    } finally {
+      setDetectingDerailment(false);
+    }
+  };
+
+  const handleGenerateRecoveryPaths = async () => {
+    if (!campaignId || !derailmentContext.trim()) return;
+    try {
+      setPanicLoading(true);
+      const data = await generateRecoveryPaths(campaignId, derailmentContext);
+      setRecoveryPaths(data.recoveryPaths || []);
+      setActiveRecoveryTab(0);
+    } catch (err) {
+      console.error("Failed to generate recovery paths:", err);
+    } finally {
+      setPanicLoading(false);
+    }
+  };
+
+  const handleApplyRecoveryPath = async (path: any, options: { quest: boolean; npc: boolean; narration: boolean }) => {
+    if (!campaignId) return;
+    try {
+      setApplyLoading(true);
+      const params: any = {};
+      
+      if (options.quest && path.alternate_quest) {
+        params.questTitle = path.alternate_quest.title;
+        params.questDescription = path.alternate_quest.description;
+        params.questObjective = path.alternate_quest.objective;
+      }
+      
+      if (options.npc && path.emergency_npc) {
+        params.npcName = path.emergency_npc.name;
+        params.npcDescription = path.emergency_npc.description;
+        params.npcDialogueStarter = path.emergency_npc.dialogue_starter;
+      }
+      
+      if (options.narration) {
+        // Build a cinematic narrative transition to show players
+        let fullNarration = path.description || "";
+        if (path.emergency_npc && path.emergency_npc.dialogue_starter) {
+          fullNarration += `\n\n${path.emergency_npc.name} steps forward: ${path.emergency_npc.dialogue_starter}`;
+        }
+        if (path.backup_encounter) {
+          fullNarration += `\n\n[Encounter Triggered: ${path.backup_encounter.title}] - ${path.backup_encounter.description}`;
+        }
+        params.narrationText = fullNarration;
+      }
+
+      const res = await applyRecoveryPath(campaignId, params);
+      if (res.success) {
+        setRecoveryPaths([]);
+        setDerailmentContext("");
+        setDetectionResult(null);
+        setPanicPanelOpen(false);
+        snapshotQuery.refetch();
+      }
+    } catch (err) {
+      console.error("Failed to apply recovery path:", err);
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isDM && campaignId) {
       fetchStoryPrep();
+      fetchSavedPanicRecovery();
     }
   }, [isDM, campaignId]);
 
@@ -582,12 +719,18 @@ export function RoomPage() {
       socket.emit(SocketEvents.JoinCampaign, { campaignId });
     };
 
+    const onReaction = (payload: { emoji: string }) => {
+      triggerFloatingReaction(payload.emoji);
+    };
+
     socket.on("disconnect", onDisconnect);
     socket.on("connect", onConnect);
+    socket.on("DICE_ROLL_REACTION", onReaction);
 
     return () => {
       socket.off("disconnect", onDisconnect);
       socket.off("connect", onConnect);
+      socket.off("DICE_ROLL_REACTION", onReaction);
       socket.emit(SocketEvents.LeaveCampaign);
       disconnectSocket();
     };
@@ -598,26 +741,52 @@ export function RoomPage() {
       return;
     }
 
+    const isHighStakes = 
+      lastDiceRoll.classification?.tier === 'critical' || 
+      lastDiceRoll.classification?.tier === 'legendary';
+    
+    // Heartbeat audio/SFX placeholder hook
+    if (isHighStakes) {
+      console.log('[SFX]: Triggering suspense heartbeat SFX loop...');
+    }
+
     setRollingAnimation({
       active: true,
       type: lastDiceRoll.diceType,
       result: null,
       actor: lastDiceRoll.userLabel,
+      classification: lastDiceRoll.classification,
+      narration: lastDiceRoll.narration,
     });
 
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    
+    // High-stakes rolls have a 1.8s suspenseful delay; standard rolls have a 0.9s delay
+    const delayMs = isHighStakes ? 1800 : 900;
+    
     const revealTimer = setTimeout(() => {
-      setRollingAnimation({
+      setRollingAnimation((current) => ({
+        ...current,
         active: true,
-        type: lastDiceRoll.diceType,
         result: lastDiceRoll.total,
-        actor: lastDiceRoll.userLabel,
-      });
+      }));
+
+      // SFX hooks on reveal
+      if (lastDiceRoll.result === 20) {
+        console.log('[SFX]: Triggering critical success legendary impact SFX...');
+      } else if (lastDiceRoll.result === 1) {
+        console.log('[SFX]: Triggering catastrophic critical fail impact SFX...');
+      } else if (isHighStakes) {
+        console.log('[SFX]: Triggering general high-stakes resolve impact SFX...');
+      }
+
+      // Hide after 5.5 seconds for high-stakes/narrated rolls (to read bards), or 2.6 seconds for normal
+      const displayMs = (isHighStakes || lastDiceRoll.narration) ? 5500 : 2600;
 
       hideTimer = setTimeout(() => {
         setRollingAnimation((current) => ({ ...current, active: false }));
-      }, 2600);
-    }, 900);
+      }, displayMs);
+    }, delayMs);
 
     return () => {
       clearTimeout(revealTimer);
@@ -994,8 +1163,19 @@ export function RoomPage() {
             </div>
             <div className="flex flex-wrap gap-3 text-sm">
               <span className={cn("inline-flex items-center gap-2 rounded-full px-3 py-1", getSessionStatusClass(sessionState?.status))}>
-                <span className="h-2 w-2 rounded-full bg-current opacity-80" />
+                <span className={cn("h-2 w-2 rounded-full bg-current", sessionState?.status === "active" && "animate-ping")} />
                 {sessionState?.status ?? "idle"}
+              </span>
+              <span className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-all duration-300",
+                connectionQuality === "excellent" && "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]",
+                connectionQuality === "poor" && "bg-amber-500/10 text-amber-300 border-amber-500/20 animate-pulse",
+                connectionQuality === "offline" && "bg-rose-500/10 text-rose-300 border-rose-500/20 animate-bounce"
+              )}>
+                <span className={cn("h-1.5 w-1.5 rounded-full bg-current", connectionQuality !== "excellent" && "animate-ping")} />
+                {connectionQuality === "excellent" && "Table Connected"}
+                {connectionQuality === "poor" && "Weak Signal"}
+                {connectionQuality === "offline" && "Connection Lost - Attuning..."}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-tavern-border bg-white/5 px-3 py-1 text-[#cbc3b5]/70">
                 Mode: {sessionState?.mode ?? "narration"}
@@ -1027,7 +1207,7 @@ export function RoomPage() {
                     disabled={isWeavingRecap}
                   >
                     <Play className="h-4 w-4" fill="currentColor" />
-                    Start Session
+                    {sessionState?.status === "ended" ? "Resume Journey" : "Start Session"}
                   </Button>
                 )}
               </>
@@ -1442,6 +1622,274 @@ export function RoomPage() {
                   </Button>
                 </div>
               </CardContent>
+            </Card>
+          ) : null}
+
+          {isDM ? (
+            <Card className="border-red-500/30 bg-[linear-gradient(185deg,rgba(40,10,10,0.4),rgba(10,5,5,0.7))] shadow-[0_8px_32px_rgba(239,68,68,0.08)] relative overflow-hidden transition-all duration-300">
+              {/* Glowing red accent lighting */}
+              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-36 h-36 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+              
+              <CardHeader className="pb-4 flex flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2.5 text-red-200">
+                    <AlertOctagon className="h-5 w-5 text-red-500 animate-pulse" />
+                    DM Emergency Panic & Recovery
+                  </CardTitle>
+                  <CardDescription className="text-red-200/50">
+                    If players completely derail, stall, or kill key elements, invoke AI narrative recovery paths to seamlessly redirect them.
+                  </CardDescription>
+                </div>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPanicPanelOpen(!panicPanelOpen)}
+                  className={`h-9 px-4 uppercase tracking-wider text-xs border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-200 shrink-0 ${panicPanelOpen ? "bg-red-500/10 border-red-500/60 text-red-100" : ""}`}
+                >
+                  {panicPanelOpen ? "Close Deck" : "🚨 Panic"}
+                </Button>
+              </CardHeader>
+              
+              <AnimatePresence>
+                {panicPanelOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CardContent className="space-y-5 pt-0 pb-6 border-t border-red-500/10 mt-2">
+                      
+                      {/* Step 1: Detect derailment or enter context */}
+                      <div className="space-y-3 pt-4">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs uppercase tracking-[0.2em] font-semibold text-red-200/70 block">
+                            Identify Derailment Situation
+                          </label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleDetectDerailment}
+                            disabled={detectingDerailment}
+                            className="h-7 px-2.5 text-[10px] uppercase tracking-wider text-red-400 hover:text-red-200 hover:bg-red-500/10 gap-1.5"
+                          >
+                            {detectingDerailment ? (
+                              <LoaderCircle className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Bot className="h-3.5 w-3.5" />
+                            )}
+                            Auto-Detect Situation
+                          </Button>
+                        </div>
+                        
+                        {detectionResult && (
+                          <div className={`p-4 rounded-xl border text-xs leading-relaxed transition-all ${
+                            detectionResult.is_derailment 
+                              ? "bg-red-500/10 border-red-500/30 text-red-200" 
+                              : "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                          }`}>
+                            <div className="flex items-center gap-2 font-bold uppercase tracking-wider mb-1">
+                              {detectionResult.is_derailment ? (
+                                <>
+                                  <ShieldAlert className="h-4 w-4 text-red-500" />
+                                  <span>Derailment Detected ({detectionResult.severity} severity)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Users className="h-4 w-4 text-emerald-400" />
+                                  <span>No Major Derailment Detected</span>
+                                </>
+                              )}
+                            </div>
+                            <p className="font-semibold text-sm mt-1">{detectionResult.situation_title}</p>
+                            <p className="mt-1 opacity-80">{detectionResult.description || "The timeline flows seamlessly within prepared parameters. No intervention is mechanically required."}</p>
+                          </div>
+                        )}
+                        
+                        <textarea
+                          placeholder="Describe exactly what went wrong (e.g. 'The players killed the high priestess, burned down the guildhall, or walked completely off the active dungeon path')..."
+                          value={derailmentContext}
+                          onChange={(e) => setDerailmentContext(e.target.value)}
+                          className="w-full min-h-[96px] resize-none rounded-xl border border-red-500/20 bg-black/40 p-3.5 text-sm text-[#f5efe2] outline-none placeholder:text-red-200/30 focus:border-red-500/40"
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleGenerateRecoveryPaths}
+                          disabled={panicLoading || !derailmentContext.trim()}
+                          className="w-full md:w-auto h-10 px-5 gap-2 bg-red-600 text-white hover:bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] disabled:opacity-50"
+                        >
+                          {panicLoading ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Zap className="h-4 w-4" />
+                          )}
+                          Forge 3 Narrative Recovery Paths
+                        </Button>
+                      </div>
+
+                      {/* Step 2: Show recovery paths */}
+                      {recoveryPaths.length > 0 && (
+                        <div className="space-y-4 pt-4 border-t border-red-500/10">
+                          <div className="flex items-center gap-2">
+                            <ScrollText className="h-4 w-4 text-[#d5b45d]" />
+                            <h4 className="text-xs uppercase tracking-[0.2em] font-semibold text-[#f5efe2]">Forged Emergency Paths</h4>
+                          </div>
+
+                          {/* Tab selectors for paths */}
+                          <div className="flex rounded-full bg-black/50 p-0.5 border border-red-500/20">
+                            {recoveryPaths.map((path, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActiveRecoveryTab(idx)}
+                                className={`flex-1 rounded-full py-2 text-xs uppercase tracking-wider font-semibold transition-all ${
+                                  activeRecoveryTab === idx
+                                    ? "bg-red-500/20 border border-red-500/40 text-red-200 font-bold"
+                                    : "text-[#cbc3b5]/60 hover:text-white"
+                                }`}
+                              >
+                                Path {idx + 1}: {path.title.slice(0, 18)}...
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Active Tab Panel */}
+                          <div className="bg-black/30 border border-red-500/10 rounded-2xl p-5 space-y-4 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)]">
+                            
+                            {/* Path Header */}
+                            <div className="space-y-1">
+                              <h5 className="font-bold text-red-200 text-base">{recoveryPaths[activeRecoveryTab].title}</h5>
+                              <p className="text-xs text-[#cbc3b5]/70 italic leading-relaxed">{recoveryPaths[activeRecoveryTab].description}</p>
+                            </div>
+
+                            {/* Grid of details: NPC & Quest */}
+                            <div className="grid gap-4 md:grid-cols-2">
+                              
+                              {/* NPC */}
+                              {recoveryPaths[activeRecoveryTab].emergency_npc && (
+                                <div className="p-3 bg-red-950/15 border border-red-500/10 rounded-xl space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase tracking-wider text-red-300 font-bold">Emergency NPC</span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={async () => {
+                                        const npc = recoveryPaths[activeRecoveryTab].emergency_npc;
+                                        await handleApplyRecoveryPath(recoveryPaths[activeRecoveryTab], { quest: false, npc: true, narration: false });
+                                        alert(`Deployed NPC ${npc.name} into campaign snapshot!`);
+                                      }}
+                                      className="h-6 px-1.5 text-[8px] uppercase tracking-widest text-[#d5b45d] hover:bg-[#d5b45d]/10 hover:text-white"
+                                    >
+                                      Deploy Token
+                                    </Button>
+                                  </div>
+                                  <p className="font-bold text-xs text-[#f5efe2]">{recoveryPaths[activeRecoveryTab].emergency_npc.name}</p>
+                                  <p className="text-[10px] text-[#cbc3b5]/60 leading-normal">{recoveryPaths[activeRecoveryTab].emergency_npc.description}</p>
+                                  <p className="text-[10px] text-[#d5b45d] italic bg-black/30 p-1.5 rounded border border-tavern-border/20 font-serif">
+                                    {recoveryPaths[activeRecoveryTab].emergency_npc.dialogue_starter}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Alternate Quest */}
+                              {recoveryPaths[activeRecoveryTab].alternate_quest && (
+                                <div className="p-3 bg-red-950/15 border border-red-500/10 rounded-xl space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase tracking-wider text-red-300 font-bold">Alternate Quest</span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={async () => {
+                                        const quest = recoveryPaths[activeRecoveryTab].alternate_quest;
+                                        await handleApplyRecoveryPath(recoveryPaths[activeRecoveryTab], { quest: true, npc: false, narration: false });
+                                        alert(`Forged Quest "${quest.title}" for all players!`);
+                                      }}
+                                      className="h-6 px-1.5 text-[8px] uppercase tracking-widest text-[#d5b45d] hover:bg-[#d5b45d]/10 hover:text-white"
+                                    >
+                                      Forge Quest
+                                    </Button>
+                                  </div>
+                                  <p className="font-bold text-xs text-[#f5efe2]">{recoveryPaths[activeRecoveryTab].alternate_quest.title}</p>
+                                  <p className="text-[10px] text-[#cbc3b5]/60 leading-normal">{recoveryPaths[activeRecoveryTab].alternate_quest.description}</p>
+                                  <p className="text-[10px] text-[#d5b45d]/80 font-mono">
+                                    <span className="text-red-300">Goal:</span> {recoveryPaths[activeRecoveryTab].alternate_quest.objective}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Encounter & Lore/Reaction */}
+                            <div className="space-y-3 border-t border-red-500/10 pt-3">
+                              {recoveryPaths[activeRecoveryTab].backup_encounter && (
+                                <div className="text-xs text-[#cbc3b5]/80 leading-relaxed">
+                                  <span className="font-bold text-red-300 block mb-0.5">Backup Encounter: {recoveryPaths[activeRecoveryTab].backup_encounter.title}</span>
+                                  {recoveryPaths[activeRecoveryTab].backup_encounter.description}
+                                  {recoveryPaths[activeRecoveryTab].backup_encounter.combat_opportunity && (
+                                    <span className="block mt-1 font-mono text-[10px] text-[#d5b45d]">⚔️ {recoveryPaths[activeRecoveryTab].backup_encounter.combat_opportunity}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="grid gap-3 md:grid-cols-2 text-[10px] text-[#cbc3b5]/60">
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-red-300/80 block">Lore Justification</span>
+                                  <p className="leading-relaxed">{recoveryPaths[activeRecoveryTab].lore_explanation}</p>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-red-300/80 block">World & Faction Reaction</span>
+                                  <p className="leading-relaxed">{recoveryPaths[activeRecoveryTab].world_reaction}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Hidden DM-only controls */}
+                            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-red-500/10 pt-4">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const path = recoveryPaths[activeRecoveryTab];
+                                  let draft = path.description || "";
+                                  if (path.emergency_npc && path.emergency_npc.dialogue_starter) {
+                                    draft += `\n\n${path.emergency_npc.name} emerges: ${path.emergency_npc.dialogue_starter}`;
+                                  }
+                                  if (path.backup_encounter) {
+                                    draft += `\n\n[Encounter: ${path.backup_encounter.title}] - ${path.backup_encounter.description}`;
+                                  }
+                                  setDmNarrationDraft(draft);
+                                  alert("Copied transition text into DM Narration Override draft box above!");
+                                }}
+                                className="h-8 text-[10px] border-red-500/20 text-red-200 hover:bg-red-500/10"
+                              >
+                                Stage Narration
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                onClick={() => handleApplyRecoveryPath(recoveryPaths[activeRecoveryTab], { quest: true, npc: true, narration: true })}
+                                disabled={applyLoading}
+                                className="h-8 text-[10px] bg-amber-500 text-stone-950 font-bold hover:bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                              >
+                                {applyLoading ? (
+                                  <LoaderCircle className="h-3 animate-spin mr-1.5" />
+                                ) : (
+                                  <Zap className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                Auto-Apply Entire Pathway
+                              </Button>
+                            </div>
+
+                          </div>
+                        </div>
+                      )}
+                      
+                    </CardContent>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Card>
           ) : null}
 
@@ -2172,32 +2620,141 @@ export function RoomPage() {
       </div>
 
       {rollingAnimation.active ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
-          <div className="flex flex-col items-center gap-6 text-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full shadow-[0_0_80px_rgba(213,180,93,0.3)] animate-pulse" />
-              <div
-                className={cn(
-                  "relative font-display text-8xl text-[#d5b45d] drop-shadow-[0_0_24px_rgba(213,180,93,0.8)] transition-all duration-700",
-                  rollingAnimation.result === null ? "animate-spin-slow scale-90" : "scale-125",
-                )}
-              >
-                {rollingAnimation.result === null ? rollingAnimation.type : rollingAnimation.result}
-              </div>
-            </div>
-            <div className="space-y-2 mt-4 z-10 relative">
-              <p className="text-2xl font-serif italic text-[#f5efe2] tracking-wide">
-                {rollingAnimation.result === null
-                  ? `${rollingAnimation.actor} is rolling ${rollingAnimation.type}...`
-                  : `${rollingAnimation.actor} rolled a ${rollingAnimation.result}`}
-              </p>
-              {rollingAnimation.result !== null && (
-                <div className="h-px w-32 bg-gradient-to-r from-transparent via-[#ab211f] to-transparent mx-auto mt-4" />
+        <div className={cn(
+          "fixed inset-0 z-[100] flex flex-col items-center justify-center transition-all duration-700 bg-black/90 backdrop-blur-lg",
+          rollingAnimation.classification?.tier === 'legendary' && "bg-[radial-gradient(circle_at_center,rgba(213,180,93,0.15)_0%,rgba(12,10,9,0.98)_100%)]",
+          rollingAnimation.classification?.tier === 'critical' && rollingAnimation.result === 1 && "bg-[radial-gradient(circle_at_center,rgba(171,33,31,0.15)_0%,rgba(12,10,9,0.98)_100%)]"
+        )}>
+          {/* Heartbeat Border Overlay for Legendary/Critical Suspense */}
+          {rollingAnimation.result === null && (rollingAnimation.classification?.tier === 'critical' || rollingAnimation.classification?.tier === 'legendary') && (
+            <div className="absolute inset-0 border-[6px] border-[#ab211f]/30 animate-pulse pointer-events-none z-10" />
+          )}
+
+          {/* Drifting Cinematic Particle Effects */}
+          {rollingAnimation.result !== null && (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-60">
+              {/* Embers/Ash for failures or dark fantasy */}
+              {(rollingAnimation.result === 1 || rollingAnimation.classification?.tier === 'legendary') && (
+                <div className="absolute inset-0 animate-ember-drift bg-[radial-gradient(ellipse_at_bottom,rgba(171,33,31,0.08),transparent_70%)]" />
+              )}
+              {/* Golden sparkles for successes */}
+              {(rollingAnimation.result === 20 || (rollingAnimation.classification?.tier === 'legendary' && rollingAnimation.result > 10)) && (
+                <div className="absolute inset-0 animate-sparkle bg-[radial-gradient(ellipse_at_bottom,rgba(213,180,93,0.08),transparent_70%)]" />
               )}
             </div>
+          )}
+
+          <div className="flex flex-col items-center gap-6 text-center max-w-3xl px-6 relative z-10">
+            {/* Ambient Glow Aura */}
+            <div className="relative">
+              <div className={cn(
+                "absolute inset-0 rounded-full blur-[80px] opacity-40 transition-all duration-1000 scale-150 animate-pulse",
+                rollingAnimation.result === null ? "bg-[#d5b45d]" :
+                rollingAnimation.result === 20 ? "bg-[#d5b45d] scale-200 opacity-70 shadow-[0_0_120px_#d5b45d]" :
+                rollingAnimation.result === 1 ? "bg-red-600 scale-180 opacity-60 shadow-[0_0_100px_#ef4444]" :
+                rollingAnimation.classification?.tier === 'legendary' ? "bg-amber-500 scale-200" : "bg-[#d5b45d]"
+              )} />
+
+              {/* Weighy Dice Node with screen shake triggers */}
+              <div
+                className={cn(
+                  "relative font-display text-9xl transition-all duration-700 drop-shadow-[0_0_30px_rgba(213,180,93,0.5)] select-none",
+                  rollingAnimation.result === null ? "animate-spin-slow scale-90 text-[#d5b45d]/80" : 
+                  rollingAnimation.result === 20 ? "scale-135 text-[#d5b45d] drop-shadow-[0_0_40px_#d5b45d] animate-dice-shake font-bold" :
+                  rollingAnimation.result === 1 ? "scale-125 text-red-500 drop-shadow-[0_0_40px_#ef4444] animate-dice-shake" :
+                  rollingAnimation.classification?.tier === 'legendary' ? "scale-130 text-amber-300 animate-dice-shake" :
+                  "scale-110 text-[#d5b45d]"
+                )}
+              >
+                {rollingAnimation.result === null ? (
+                  <span className="font-serif italic text-4xl text-[#cbc3b5]/60 animate-pulse">
+                    spinning {rollingAnimation.type}...
+                  </span>
+                ) : (
+                  rollingAnimation.result
+                )}
+              </div>
+            </div>
+
+            {/* Emotional Presentations */}
+            <div className="space-y-4 mt-6 z-10 relative">
+              <div className="flex flex-col items-center gap-1.5">
+                <span className={cn(
+                  "text-xs uppercase tracking-[0.2em] font-display font-semibold transition-all duration-300",
+                  rollingAnimation.result === null ? "text-[#d5b45d]/60" :
+                  rollingAnimation.result === 20 ? "text-[#d5b45d] drop-shadow-[0_0_8px_#d5b45d]" :
+                  rollingAnimation.result === 1 ? "text-red-500 animate-pulse" :
+                  rollingAnimation.classification?.tier === 'legendary' ? "text-amber-400" :
+                  "text-[#cbc3b5]/80"
+                )}>
+                  {rollingAnimation.result === null 
+                    ? `Initiating Table Roll` 
+                    : `${rollingAnimation.classification?.tier || 'standard'} outcome`}
+                </span>
+                
+                <h3 className="text-3xl md:text-4xl font-serif text-[#f5efe2] tracking-wide leading-snug">
+                  {rollingAnimation.result === null
+                    ? `${rollingAnimation.actor} is rolling...`
+                    : `${rollingAnimation.actor} rolled a ${rollingAnimation.result}!`}
+                </h3>
+              </div>
+
+              {/* Show context details if provided */}
+              {rollingAnimation.result !== null && rollingAnimation.classification?.emotionalMoment && (
+                <div className={cn(
+                  "inline-block px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase border mt-2",
+                  rollingAnimation.result === 20 ? "bg-[#d5b45d]/10 border-[#d5b45d]/30 text-[#d5b45d]" :
+                  rollingAnimation.result === 1 ? "bg-red-500/10 border-red-500/30 text-red-400" :
+                  "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                )}>
+                  {rollingAnimation.classification.emotionalMoment.replace(/_/g, ' ')}
+                </div>
+              )}
+
+              {/* AI DM Narration Overlay */}
+              {rollingAnimation.result !== null && rollingAnimation.narration && (
+                <div className="mt-6 max-w-2xl mx-auto space-y-4 animate-fade-in-up">
+                  <div className="h-px w-32 bg-gradient-to-r from-transparent via-[#d5b45d]/50 to-transparent mx-auto" />
+                  <p className="text-xl font-serif italic text-[#e6dfd1] leading-relaxed max-w-xl mx-auto drop-shadow-md">
+                    "{rollingAnimation.narration}"
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Live Multiplayer Reaction floating buttons */}
+            {rollingAnimation.result !== null && (
+              <div className="mt-8 flex items-center justify-center gap-3 bg-black/40 border border-tavern-border/50 rounded-full px-5 py-2.5 backdrop-blur-md z-20">
+                <span className="text-xs text-[#cbc3b5]/60 font-sans mr-2">React:</span>
+                {(["🎉", "🔥", "😱", "💀", "👑"]).map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleSendReaction(emoji)}
+                    className="hover:scale-130 active:scale-95 transition-all text-2xl filter drop-shadow-md duration-200"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : null}
+
+      {/* Floating Reaction Overlay */}
+      {rollingAnimation.active && (
+        <div className="fixed inset-0 pointer-events-none z-[120] overflow-hidden">
+          {floatingReactions.map((r) => (
+            <div
+              key={r.id}
+              style={{ left: `${r.left}%` }}
+              className="absolute bottom-10 text-5xl animate-float-up filter drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+            >
+              {r.emoji}
+            </div>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence>
         {showEventOverlay && (
@@ -2335,6 +2892,7 @@ export function RoomPage() {
           <SessionRecapCinematic 
             recap={activeRecap}
             onClose={() => setActiveRecap(null)}
+            activeQuests={snapshotQuery.data?.snapshot?.quests?.filter((q: any) => q.status !== 'completed' && q.status !== 'failed') || []}
           />
         )}
         <CinematicPopupManager />

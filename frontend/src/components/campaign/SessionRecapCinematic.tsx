@@ -24,9 +24,10 @@ interface SessionRecap {
 interface SessionRecapCinematicProps {
   recap: SessionRecap;
   onClose: () => void;
+  activeQuests?: Array<{ id: number; title: string; description: string | null; status: string }>;
 }
 
-export function SessionRecapCinematic({ recap, onClose }: SessionRecapCinematicProps) {
+export function SessionRecapCinematic({ recap, onClose, activeQuests }: SessionRecapCinematicProps) {
   const [isPlayingNarration, setIsPlayingNarration] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -419,6 +420,42 @@ export function SessionRecapCinematic({ recap, onClose }: SessionRecapCinematicP
               {renderStyledScript(recap.narration)}
             </blockquote>
           </div>
+
+          {activeQuests && activeQuests.length > 0 && (
+            <>
+              <hr className="border-stone-800 max-w-xl mx-auto" />
+              <div className="max-w-3xl mx-auto space-y-6">
+                <div className="text-center">
+                  <h3 className="text-sm font-display uppercase tracking-widest font-bold text-[#d5b45d] flex items-center justify-center gap-2">
+                    <Compass className="h-4 w-4 text-[#d5b45d]" />
+                    Unresolved Quests & Narrative Hooks
+                  </h3>
+                  <p className="text-xs text-[#cbc3b5]/60 font-serif italic mt-1">Sagas left unfinished, awaiting your party's return.</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {activeQuests.map((quest) => (
+                    <motion.div 
+                      key={quest.id}
+                      className="bg-[#181615]/40 border border-stone-800 hover:border-stone-700/60 rounded-xl p-4 text-left transition-all duration-300"
+                    >
+                      <h4 className="font-display font-semibold text-sm text-[#f5efe2]">{quest.title}</h4>
+                      {quest.description && (
+                        <p className="mt-1 text-xs font-serif text-[#cbc3b5]/75 leading-relaxed">
+                          {quest.description}
+                        </p>
+                      )}
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-[9px] uppercase font-mono text-[#d5b45d] bg-[#d5b45d]/10 border border-[#d5b45d]/20 px-2.5 py-0.5 rounded-full">
+                          Unresolved Hook
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer controls */}

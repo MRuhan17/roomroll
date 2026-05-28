@@ -15,6 +15,7 @@ import {
     updateInventoryItemHandler,
     updateStatusEffectHandler,
 } from '../controllers/characterController';
+import { validateBody, characterSchema } from '../middleware/validationMiddleware';
 
 const router = Router({ mergeParams: true });
 
@@ -28,9 +29,9 @@ const characterLimiter = rateLimit({
 });
 
 router.get('/', authenticateRequest, characterLimiter, listCharactersHandler);
-router.post('/', authenticateRequest, characterLimiter, createCharacterHandler);
+router.post('/', authenticateRequest, characterLimiter, validateBody(characterSchema), createCharacterHandler);
 router.get('/:characterId', authenticateRequest, characterLimiter, getCharacterHandler);
-router.patch('/:characterId', authenticateRequest, characterLimiter, updateCharacterHandler);
+router.patch('/:characterId', authenticateRequest, characterLimiter, validateBody(characterSchema.partial()), updateCharacterHandler);
 router.post('/:characterId/xp', authenticateRequest, characterLimiter, awardExperienceHandler);
 router.post('/:characterId/inventory', authenticateRequest, characterLimiter, addInventoryItemHandler);
 router.patch('/:characterId/inventory/:itemId', authenticateRequest, characterLimiter, updateInventoryItemHandler);

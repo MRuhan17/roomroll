@@ -151,3 +151,34 @@ export async function getUserCampaigns() {
   return res.data;
 }
 
+export async function detectDerailment(campaignId: number) {
+  const res = await api.get<{ is_derailment: boolean; severity: string; situation_title: string | null; description: string | null }>(`/api/campaigns/${campaignId}/panic/detect`);
+  return res.data;
+}
+
+export async function generateRecoveryPaths(campaignId: number, derailmentContext: string) {
+  const res = await api.post<{ recoveryPaths: any[] }>(`/api/campaigns/${campaignId}/panic/recover`, { derailmentContext });
+  return res.data;
+}
+
+export async function getSavedRecoveryPaths(campaignId: number) {
+  const res = await api.get<{ recoveryPaths: any[]; lastDerailmentContext: string | null }>(`/api/campaigns/${campaignId}/panic/saved`);
+  return res.data;
+}
+
+export async function applyRecoveryPath(
+  campaignId: number,
+  params: {
+    questTitle?: string;
+    questDescription?: string;
+    questObjective?: string;
+    npcName?: string;
+    npcDescription?: string;
+    npcDialogueStarter?: string;
+    narrationText?: string;
+  }
+) {
+  const res = await api.post<{ success: boolean; message: string }>(`/api/campaigns/${campaignId}/panic/apply`, params);
+  return res.data;
+}
+

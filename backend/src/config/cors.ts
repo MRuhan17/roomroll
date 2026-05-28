@@ -15,12 +15,26 @@ export const getCorsOrigins = (): string[] => {
         allowedOrigins.push('http://localhost:3000');
     }
 
-    // Allow Vercel preview deployments
     return allowedOrigins;
 };
 
 export const corsOptions = {
-    origin: getCorsOrigins(),
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        const allowed = getCorsOrigins();
+        // Allow same-origin requests (like mobile, curl, supertest, etc. which don't set Origin header)
+        if (!origin || allowed.indexOf(origin) !== -1) {
+            callback(null, true);
+            return;
+        }
+        
+        // Dynamically allow safe roomroll vercel preview deployments
+        const isVercelPreview = origin.endsWith('.vercel.app') && origin.includes('roomroll');
+        if (isVercelPreview) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 };

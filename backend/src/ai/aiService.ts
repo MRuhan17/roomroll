@@ -5,9 +5,12 @@ import {
     buildQuestHookPrompt, 
     buildFactionReactionPrompt, 
     buildSessionSummaryPrompt,
-    buildCinematicRecapPrompt
+    buildCinematicRecapPrompt,
+    buildDetectDerailmentPrompt,
+    buildPanicRecoveryPrompt,
+    buildCinematicRollNarrationPrompt
 } from './promptBuilder';
-import { getCampaignSnapshot } from '../services/campaignStateService';
+import { getCampaignSnapshot, CampaignSnapshot } from '../services/campaignStateService';
 import { createCampaignEvent } from '../services/eventService';
 import { appendNarrationLog, createCampaignMemory } from '../services/memoryService';
 import { NarrationRequest, NarrationResponse } from '../types/ai';
@@ -29,6 +32,31 @@ const buildFallbackNarration = (playerAction: string): string => {
     return `The world responds immediately—${playerAction}. The scene shifts with a cinematic beat as the consequences ripple outward.`;
 };
 
+export const sanitizePlayerAction = (action: string): string => {
+    // Prevent token exhaustion by truncating to max 500 characters
+    let sanitized = action.slice(0, 500);
+    
+    // Simple prompt injection detection and redaction
+    const injectionPatterns = [
+        /ignore\s+(?:all\s+)?previous\s+instructions/i,
+        /system\s+override/i,
+        /you\s+are\s+now/i,
+        /forget\s+(?:everything|what\s+was\s+said)/i,
+        /bypass\s+restrictions/i,
+        /new\s+system\s+prompt/i,
+        /assistant\s+mode/i,
+        /developer\s+mode/i
+    ];
+    
+    for (const pattern of injectionPatterns) {
+        if (pattern.test(sanitized)) {
+            sanitized = sanitized.replace(pattern, "[REDACTED COMMAND]");
+        }
+    }
+    
+    return sanitized;
+};
+
 export const callOpenAi = async (prompt: string): Promise<string | null> => {
     const apiKey = process.env.OPENAI_API_KEY;
     const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
@@ -42,31 +70,47 @@ export const callOpenAi = async (prompt: string): Promise<string | null> => {
         return null;
     }
 
-    const response = await runtimeFetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model,
-            messages: [
-                { role: 'system', content: 'You are a cinematic tabletop RPG Dungeon Master.' },
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.8
-        })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout protection
 
-    if (!response.ok) {
+    try {
+        const response = await runtimeFetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: 'You are a cinematic tabletop RPG Dungeon Master.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.8
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+        };
+
+        return data.choices?.[0]?.message?.content?.trim() ?? null;
+    } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.error('[ai]: OpenAI API request timed out after 12 seconds');
+        } else {
+            console.error('[ai]: OpenAI API call error:', error);
+        }
         return null;
     }
-
-    const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-    };
-
-    return data.choices?.[0]?.message?.content?.trim() ?? null;
 };
 
 export const detectSessionMoodAndAmbience = async (narrationText: string): Promise<{ mood: string; ambience: string }> => {
@@ -154,16 +198,17 @@ export const generateNarration = async (request: NarrationRequest): Promise<Narr
         throw new Error('AI is on cooldown. Please wait before requesting again.');
     }
     const snapshot = await getCampaignSnapshot(request.campaignId);
-    const prompt = buildNarrationPrompt(snapshot, request.playerAction, request.tone);
+    const sanitizedAction = sanitizePlayerAction(request.playerAction);
+    const prompt = buildNarrationPrompt(snapshot, sanitizedAction, request.tone);
 
     const aiNarration = await callOpenAi(prompt);
-    const narration = aiNarration ?? buildFallbackNarration(request.playerAction);
+    const narration = aiNarration ?? buildFallbackNarration(sanitizedAction);
     const usedFallback = !aiNarration;
 
     await createCampaignEvent(
         request.campaignId,
         'NEW_NARRATION',
-        { text: narration, playerAction: request.playerAction, tone: request.tone ?? 'cinematic' },
+        { text: narration, playerAction: sanitizedAction, tone: request.tone ?? 'cinematic' },
         request.userId
     );
 
@@ -497,5 +542,148 @@ export const generateCinematicRecap = async (
     }
 
     return recapJson;
+};
+
+export const detectDerailment = async (campaignId: number): Promise<{
+    is_derailment: boolean;
+    severity: string;
+    situation_title: string | null;
+    description: string | null;
+}> => {
+    const snapshot = await getCampaignSnapshot(campaignId);
+    const prompt = buildDetectDerailmentPrompt(snapshot);
+    const response = await callOpenAi(prompt);
+    
+    if (!response) {
+        return { is_derailment: false, severity: 'none', situation_title: null, description: null };
+    }
+    
+    try {
+        const cleaned = response.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+            is_derailment: !!parsed.is_derailment,
+            severity: parsed.severity || 'none',
+            situation_title: parsed.situation_title || null,
+            description: parsed.description || null
+        };
+    } catch (err) {
+        console.error('Failed to parse derailment detection response:', err, response);
+        return { is_derailment: false, severity: 'none', situation_title: null, description: null };
+    }
+};
+
+export const generateRecoveryPaths = async (campaignId: number, derailmentContext: string): Promise<any[]> => {
+    const snapshot = await getCampaignSnapshot(campaignId);
+    const prompt = buildPanicRecoveryPrompt(snapshot, derailmentContext);
+    const response = await callOpenAi(prompt);
+    
+    if (!response) {
+        throw new Error('Failed to generate recovery paths from AI.');
+    }
+    
+    try {
+        const cleaned = response.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed && Array.isArray(parsed.recovery_paths)) {
+            return parsed.recovery_paths;
+        }
+        throw new Error('AI response did not contain recovery_paths array.');
+    } catch (err) {
+        console.error('Failed to parse AI recovery paths:', err, response);
+        
+        // Fallback emergency narrative recovery path
+        return [
+            {
+                title: "The Mysterious Informant's Clue",
+                description: "A mysterious cloaked messenger approaches the party with urgent news, forcing them to re-evaluate their current trajectory.",
+                backup_encounter: {
+                    title: "Ambush in the Shadow Alley",
+                    description: "Three hooded cultists corner the party, carrying a secret note that links directly to the main storyline.",
+                    combat_opportunity: "3 Cultists (Easy difficulty)"
+                },
+                emergency_npc: {
+                    name: "Eldrin the Grey",
+                    description: "An aging wizard who has been secretly tracking the party's movement to prevent catastrophe.",
+                    dialogue_starter: "\"Fools! Do you have any idea what forces you have just unleashed? Follow me if you wish to see another dawn.\""
+                },
+                alternate_quest: {
+                    title: "A Thread of Hope",
+                    description: "Retrieve Eldrin's stolen grimoire to decode the cult's next move.",
+                    objective: "Secure the grimoire from the thieves' hideout."
+                },
+                lore_explanation: "Eldrin has been a quiet guardian of the city archives for decades, explaining his sudden but logical appearance.",
+                world_reaction: "The local guards become highly suspicious, double-guarding all city gates."
+            },
+            {
+                title: "Whispers of the Ancestors",
+                description: "An ancient spectral presence manifests in a flash of light, offering cryptic lore and a warning about their derailed path.",
+                backup_encounter: {
+                    title: "Spectral Trial",
+                    description: "The ghost tests the party's resolve with a puzzle or a brief battle of wills.",
+                    combat_opportunity: "1 Spectral Guardian (Medium difficulty)"
+                },
+                emergency_npc: {
+                    name: "Ghost of Sir Valen",
+                    description: "A legendary knight who died protecting the very secret the party is ignoring.",
+                    dialogue_starter: "\"Your footsteps stray from destiny's path. Listen closely, lest the dark consume us all!\""
+                },
+                alternate_quest: {
+                    title: "The Knight's Legacy",
+                    description: "Purify Sir Valen's corrupted tomb to regain his blessing and guidance.",
+                    objective: "Defeat the shadow remnant at the tomb altar."
+                },
+                lore_explanation: "Sir Valen's bloodline is tied to the main quest's artifact, explaining why his spirit lingers here.",
+                world_reaction: "A sudden chill spreads across the valley, and crops begin to wither."
+            },
+            {
+                title: "A Faction's Reckoning",
+                description: "The dominant local faction decides to intervene directly, sending an envoy with an offer of mutual survival.",
+                backup_encounter: {
+                    title: "Standoff with the City Watch",
+                    description: "A high-stakes negotiation with the local captain who demands the party's compliance.",
+                    combat_opportunity: "Negotiation challenge (DC 14 Charisma/Intimidation)"
+                },
+                emergency_npc: {
+                    name: "Captain Varis",
+                    description: "A no-nonsense military leader trying to keep the city from falling into complete chaos.",
+                    dialogue_starter: "\"You've made a mess of things out there. Either you do this job for me, or you rot in the dungeons.\""
+                },
+                alternate_quest: {
+                    title: "Under a Watchful Eye",
+                    description: "Perform a covert investigation for the City Watch to clear the party's reputation.",
+                    objective: "Infiltrate the smuggler's den and recover the stolen ledger."
+                },
+                lore_explanation: "The faction has a vested interest in the main quest, making their heavy-handed intervention logical.",
+                world_reaction: "Curfew is declared, and the city gates are locked down tight."
+            }
+        ];
+    }
+};
+
+export const generateCinematicRollNarration = async (
+    snapshot: CampaignSnapshot,
+    characterName: string,
+    characterClass: string,
+    characterSpecies: string,
+    roll: { diceType: string; result: number; total: number; modifier: number; },
+    classification: { tier: string; emotionalMoment?: string | null; },
+    tone?: string
+): Promise<string> => {
+    const prompt = buildCinematicRollNarrationPrompt(
+        snapshot,
+        characterName || 'An adventurer',
+        characterClass || 'Hero',
+        characterSpecies || 'Human',
+        roll,
+        classification,
+        tone
+    );
+
+    const response = await callOpenAi(prompt);
+    if (!response) {
+        return `The dice tumble to a halt, carving a new beat in the chronicle's history.`;
+    }
+    return response;
 };
 

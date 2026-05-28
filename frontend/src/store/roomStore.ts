@@ -278,6 +278,8 @@ function buildLiveDiceRoll(
     context: roll.context,
     isCriticalSuccess: roll.dice_type === "d20" && roll.result === 20,
     isCriticalFail: roll.dice_type === "d20" && roll.result === 1,
+    classification: roll.classification,
+    narration: roll.narration,
   };
 }
 
