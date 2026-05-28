@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { createCampaign, getCampaignById, getCampaignByInviteCode, getMember, getUserActiveCampaign, joinCampaign, listMembers } from '../services/campaignService';
 import { getCampaignSnapshot } from '../services/campaignStateService';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('campaign-controller');
+
 
 export const createCampaignHandler = async (req: Request, res: Response) => {
     const user = req.user;
@@ -87,32 +91,60 @@ export const getActiveCampaignHandler = async (req: Request, res: Response) => {
 export const getUserCampaignsHandler = async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) {
+        logger.warn('getUserCampaignsHandler failed: req.user is undefined');
         return res.status(401).json({ message: 'Unauthorized' });
     }
+    
+    logger.info('getUserCampaignsHandler initiated', {
+        userId: user.id,
+        userEmail: user.email
+    });
+
+    const startTime = Date.now();
+
     try {
         const { getUserCampaigns, listMembers } = await import('../services/campaignService');
         const { getCampaignSnapshot } = await import('../services/campaignStateService');
         const { supabase } = await import('../config/db');
 
+        logger.info('Fetching campaigns for user', { userId: user.id });
         const campaigns = await getUserCampaigns(user.id);
+        logger.info('Successfully fetched campaigns', { 
+            userId: user.id, 
+            campaignCount: campaigns.length 
+        });
 
         const enrichedCampaigns = await Promise.all(campaigns.map(async (camp) => {
+            const enrichStart = Date.now();
             try {
+                logger.info('Enriching campaign details', { campaignId: camp.id });
                 const members = await listMembers(camp.id);
                 const snapshot = await getCampaignSnapshot(camp.id);
                 const hostMember = members.find(m => m.role === 'DM');
 
                 let hostName = 'Dungeon Master';
                 if (hostMember) {
-                    const { data: hostUser } = await supabase
+                    const { data: hostUser, error: hostUserError } = await supabase
                         .from('users')
                         .select('display_name')
                         .eq('id', hostMember.user_id)
                         .maybeSingle();
-                    if (hostUser) {
+                    if (hostUserError) {
+                        logger.error('Failed to fetch host details', { 
+                            campaignId: camp.id, 
+                            hostUserId: hostMember.user_id,
+                            error: hostUserError
+                        });
+                    } else if (hostUser) {
                         hostName = hostUser.display_name;
                     }
                 }
+
+                logger.info('Campaign enrichment succeeded', { 
+                    campaignId: camp.id, 
+                    durationMs: Date.now() - enrichStart,
+                    memberCount: members.length
+                });
 
                 return {
                     ...camp,
@@ -121,8 +153,12 @@ export const getUserCampaignsHandler = async (req: Request, res: Response) => {
                     lastActivity: camp.last_played_at || snapshot.recentEvents?.[0]?.created_at || camp.created_at,
                     activeSessionState: camp.current_session_state
                 };
-            } catch (err) {
-                console.error(`Failed to enrich campaign ${camp.id}:`, err);
+            } catch (err: any) {
+                logger.error('Failed to enrich campaign', {
+                    campaignId: camp.id,
+                    durationMs: Date.now() - enrichStart,
+                    error: err.message || err
+                });
                 return {
                     ...camp,
                     playerCount: 1,
@@ -133,10 +169,24 @@ export const getUserCampaignsHandler = async (req: Request, res: Response) => {
             }
         }));
 
+        logger.info('getUserCampaignsHandler completed successfully', {
+            userId: user.id,
+            durationMs: Date.now() - startTime,
+            campaignCount: enrichedCampaigns.length
+        });
+
         return res.json({ campaigns: enrichedCampaigns });
-    } catch (error) {
-        console.error('Failed to get user campaigns:', error);
-        return res.status(500).json({ message: 'Failed to retrieve campaigns' });
+    } catch (error: any) {
+        logger.error('Unhandled failure in getUserCampaignsHandler', {
+            userId: user.id,
+            durationMs: Date.now() - startTime,
+            error: error.message || error,
+            stack: error.stack
+        });
+        return res.status(500).json({ 
+            message: 'Failed to retrieve campaigns',
+            error: error.message || String(error)
+        });
     }
 };
 

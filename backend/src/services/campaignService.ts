@@ -1,6 +1,10 @@
 import { supabase } from '../config/db';
 import { Campaign, CampaignParticipant } from '../types/campaign';
 import { generateInviteCode } from '../utils/inviteCode';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('campaign-service');
+
 
 export interface CreateCampaignInput {
     name: string;
@@ -161,10 +165,35 @@ export const joinCampaign = async (campaignId: number, userId: number): Promise<
 };
 
 export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
-    const { data } = await supabase
+    logger.info('[DB QUERY] Executing getUserCampaigns', { userId, table: 'campaign_participants' });
+    const startTime = Date.now();
+    
+    const { data, error } = await supabase
         .from('campaign_participants')
         .select('campaigns(*)')
         .eq('user_id', userId);
+        
+    const duration = Date.now() - startTime;
+    
+    if (error) {
+        logger.error('[DB QUERY] getUserCampaigns failed', {
+            userId,
+            durationMs: duration,
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+        });
+        throw error;
+    }
+    
+    const rowCount = data ? data.length : 0;
+    logger.info('[DB QUERY] getUserCampaigns succeeded', {
+        userId,
+        durationMs: duration,
+        rowCount
+    });
+
     if (!data) {
         return [];
     }
@@ -187,13 +216,37 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
 };
 
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
-    const { data } = await supabase
+    logger.info('[DB QUERY] Executing getUserActiveCampaign', { userId, table: 'campaign_participants' });
+    const startTime = Date.now();
+    
+    const { data, error } = await supabase
         .from('campaign_participants')
         .select('campaigns(*)')
         .eq('user_id', userId)
         .order('joined_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+        
+    const duration = Date.now() - startTime;
+    
+    if (error) {
+        logger.error('[DB QUERY] getUserActiveCampaign failed', {
+            userId,
+            durationMs: duration,
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+        });
+        throw error;
+    }
+    
+    logger.info('[DB QUERY] getUserActiveCampaign succeeded', {
+        userId,
+        durationMs: duration,
+        hasData: !!data
+    });
+
     const campaignsValue = data && typeof data === 'object' && 'campaigns' in data
         ? (data as { campaigns?: unknown }).campaigns
         : undefined;

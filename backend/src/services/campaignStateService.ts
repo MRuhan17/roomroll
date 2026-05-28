@@ -4,6 +4,10 @@ import { CampaignCharacter } from '../types/character';
 import { DiceRollRow } from '../types/dice';
 import { CampaignMap, MapToken } from '../types/map';
 import { listCharacters } from './characterService';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger('campaign-state-service');
+
 
 export interface CampaignSnapshot {
     campaign: Campaign | null;
@@ -21,6 +25,10 @@ export interface CampaignSnapshot {
 }
 
 export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignSnapshot> => {
+    logger.info('[DB QUERY] Initiating getCampaignSnapshot', { campaignId });
+    const snapshotStart = Date.now();
+
+    const campaignStart = Date.now();
     const campaignResult = await supabase
         .from('campaigns')
         .select('*')
@@ -28,11 +36,25 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .single();
 
     if (campaignResult.error) {
+        logger.error('[DB QUERY] getCampaignSnapshot: failed to fetch campaign', {
+            campaignId,
+            durationMs: Date.now() - campaignStart,
+            error: campaignResult.error.message,
+            code: campaignResult.error.code
+        });
         throw campaignResult.error;
     }
 
+    logger.info('[DB QUERY] getCampaignSnapshot: fetched base campaign', {
+        campaignId,
+        durationMs: Date.now() - campaignStart
+    });
+
     const campaign = campaignResult.data as Campaign;
     const activeSessionId = campaign?.current_session_state?.session_id;
+
+    // Parallel sub-queries
+    const subQueriesStart = Date.now();
 
     const membersPromise = supabase
         .from('campaign_participants')
@@ -81,6 +103,7 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         .limit(20);
 
     const memoriesPromise = (async () => {
+        const memStart = Date.now();
         try {
             let memoriesQuery = supabase
                 .from('campaign_memories')
@@ -99,9 +122,18 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
             
             const res = await memoriesQuery.order('created_at', { ascending: false }).limit(30);
             if (res.error) throw res.error;
+            logger.info('[DB QUERY] Memories query standard succeeded', {
+                campaignId,
+                durationMs: Date.now() - memStart,
+                rowCount: res.data?.length ?? 0
+            });
             return res;
-        } catch (err) {
-            console.warn('[DB] Standard memories query failed, running column-free fallback:', err);
+        } catch (err: any) {
+            logger.warn('[DB] Standard memories query failed, running column-free fallback', {
+                campaignId,
+                durationMs: Date.now() - memStart,
+                error: err.message || err
+            });
             return await supabase
                 .from('campaign_memories')
                 .select('*')
@@ -147,15 +179,45 @@ export const getCampaignSnapshot = async (campaignId: number): Promise<CampaignS
         charactersPromise
     ]);
 
+    logger.info('[DB QUERY] Parallel sub-queries completed', {
+        campaignId,
+        durationMs: Date.now() - subQueriesStart,
+        results: {
+            members: { count: membersResult.data?.length ?? 0, hasError: !!membersResult.error },
+            activeMap: { hasData: !!activeMapResult.data, hasError: !!activeMapResult.error },
+            quests: { count: questsResult.data?.length ?? 0, hasError: !!questsResult.error },
+            worldEvents: { count: worldEventsResult.data?.length ?? 0, hasError: !!worldEventsResult.error },
+            recentEvents: { count: recentEventsResult.data?.length ?? 0, hasError: !!recentEventsResult.error },
+            diceHistory: { count: diceHistoryResult.data?.length ?? 0, hasError: !!diceHistoryResult.error },
+            memories: { count: memoriesResult.data?.length ?? 0, hasError: !!memoriesResult.error },
+            lore: { count: loreResult.data?.length ?? 0, hasError: !!loreResult.error },
+            factions: { count: factionsResult.data?.length ?? 0, hasError: !!factionsResult.error },
+            characters: { count: characters.length }
+        }
+    });
+
     let tokens: MapToken[] = [];
     if (activeMapResult.data) {
+        const tokenStart = Date.now();
         const tokenResult = await supabase
             .from('map_tokens')
             .select('*')
             .eq('campaign_id', campaignId)
             .eq('map_id', activeMapResult.data.id);
         tokens = (tokenResult.data ?? []) as MapToken[];
+        logger.info('[DB QUERY] Map tokens query completed', {
+            campaignId,
+            mapId: activeMapResult.data.id,
+            durationMs: Date.now() - tokenStart,
+            rowCount: tokens.length,
+            hasError: !!tokenResult.error
+        });
     }
+
+    logger.info('[DB QUERY] getCampaignSnapshot completed successfully', {
+        campaignId,
+        totalDurationMs: Date.now() - snapshotStart
+    });
 
     const rawMemories = (memoriesResult.data ?? []) as CampaignMemory[];
     
