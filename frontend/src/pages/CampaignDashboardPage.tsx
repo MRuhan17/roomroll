@@ -321,7 +321,7 @@ export function CampaignDashboardPage() {
             <div className="mt-4 pt-4 border-t border-red-900/20 space-y-3 text-xs font-mono text-[#cbc3b5]/70">
               <div className="flex justify-between gap-4">
                 <span className="text-[#cbc3b5]/40 shrink-0">🔮 Target Leyline:</span>
-                <span className="text-[#cbc3b5] break-all text-right">{api.defaults.baseURL}/api/campaigns</span>
+                <span className="text-[#cbc3b5] break-all text-right">/api/campaigns</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-[#cbc3b5]/40 shrink-0">📜 Diagnostic Message:</span>
