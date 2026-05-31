@@ -8,5 +8,5 @@ export default defineConfig(function () { return ({
             "@": path.resolve(__dirname, "./src"),
         },
     },
-    envPrefix: "VITE_",
+    envPrefix: ["VITE_", "NEXT_PUBLIC_"],
 }); });

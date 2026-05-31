@@ -9,5 +9,5 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  envPrefix: "VITE_",
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
 }));
