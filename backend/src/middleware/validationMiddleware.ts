@@ -26,6 +26,22 @@ export const campaignSchema = z.object({
     name: z.string().min(3, 'Campaign name must be at least 3 characters long').max(100, 'Campaign name must be at most 100 characters long'),
     description: z.string().max(1000, 'Description must be at most 1000 characters long').optional().nullable(),
     system: z.string().max(50).optional().nullable(),
+    worldType: z.string().max(100).optional().nullable(),
+    playMode: z.enum(['human_dm', 'player_only', 'ai_dm']).optional().nullable(),
+    genre: z.string().max(100).optional().nullable(),
+    tone: z.string().max(100).optional().nullable(),
+    storyFootnotes: z.string().max(5000).optional().nullable(),
+    guidance: z.object({
+        important_locations: z.string().optional().nullable(),
+        forbidden_lore: z.string().optional().nullable(),
+        campaign_objectives: z.string().optional().nullable(),
+        recurring_villains: z.string().optional().nullable(),
+        faction_conflicts: z.string().optional().nullable(),
+        emotional_themes: z.string().optional().nullable(),
+    }).optional().nullable(),
+    targetSessions: z.number().min(1).max(100).optional().nullable(),
+    pacingIntensity: z.enum(['auto', 'slow', 'balanced', 'fast']).optional().nullable(),
+    criticalArcs: z.array(z.string()).optional().nullable(),
 });
 
 export const characterSchema = z.object({
