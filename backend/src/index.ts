@@ -1,11 +1,19 @@
-import { createServer } from 'http';
 import dotenv from 'dotenv';
+dotenv.config();
+
+// Clean environment variables of trailing backticks, quotes, and spaces from shell copy-pasts
+for (const key in process.env) {
+    const val = process.env[key];
+    if (typeof val === 'string') {
+        process.env[key] = val.trim().replace(/^[`'"]|[`'"]$/g, '').trim();
+    }
+}
+
+import { createServer } from 'http';
 import app from './app';
 import { createLogger } from './lib/logger';
 import { registerRealtimeHandlers } from './realtime/roomState';
 import { initializeSocket } from './socket';
-
-dotenv.config();
 
 const logger = createLogger('server');
 

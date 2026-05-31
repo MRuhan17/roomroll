@@ -1,5 +1,15 @@
-import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
+
+// Clean environment variables of trailing backticks, quotes, and spaces from shell copy-pasts
+for (const key in process.env) {
+    const val = process.env[key];
+    if (typeof val === 'string') {
+        process.env[key] = val.trim().replace(/^[`'"]|[`'"]$/g, '').trim();
+    }
+}
+
+import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import authRoutes from './routes/authRoutes';
 import roomRoutes from './routes/roomRoutes';
@@ -12,8 +22,6 @@ import loreRoutes from './routes/loreRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { createLogger } from './lib/logger';
 import { requestLogger } from './middleware/requestLogger';
-
-dotenv.config();
 
 const logger = createLogger('app');
 
