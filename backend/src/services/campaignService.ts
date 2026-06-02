@@ -165,13 +165,17 @@ export const joinCampaign = async (campaignId: number, userId: number): Promise<
 };
 
 export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
-    logger.info('[DB QUERY] Executing getUserCampaigns', { userId, table: 'campaign_participants' });
+    logger.info('[DB QUERY] Executing getUserCampaigns', { userId, table: 'campaigns' });
     const startTime = Date.now();
     
+    // Explicitly select campaigns where the user exists in campaign_participants
     const { data, error } = await supabase
-        .from('campaign_participants')
-        .select('campaigns(*)')
-        .eq('user_id', userId);
+        .from('campaigns')
+        .select(`
+            *,
+            campaign_participants!inner(user_id)
+        `)
+        .eq('campaign_participants.user_id', userId);
         
     const duration = Date.now() - startTime;
     
@@ -180,50 +184,37 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
             userId,
             durationMs: duration,
             error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
+            code: error.code
         });
         throw error;
     }
     
-    const rowCount = data ? data.length : 0;
+    const campaigns = (data || []).map((camp: any) => {
+        const { campaign_participants, ...campaignData } = camp;
+        return campaignData as Campaign;
+    });
+
     logger.info('[DB QUERY] getUserCampaigns succeeded', {
         userId,
         durationMs: duration,
-        rowCount
+        rowCount: campaigns.length
     });
 
-    if (!data) {
-        return [];
-    }
-    const campaigns: Campaign[] = [];
-    for (const row of data) {
-        if (row && typeof row === 'object' && 'campaigns' in row) {
-            const campaignsValue = (row as { campaigns?: unknown }).campaigns;
-            if (Array.isArray(campaignsValue)) {
-                for (const campaign of campaignsValue) {
-                    if (isCampaign(campaign)) {
-                        campaigns.push(campaign);
-                    }
-                }
-            } else if (isCampaign(campaignsValue)) {
-                campaigns.push(campaignsValue);
-            }
-        }
-    }
     return campaigns;
 };
 
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
-    logger.info('[DB QUERY] Executing getUserActiveCampaign', { userId, table: 'campaign_participants' });
+    logger.info('[DB QUERY] Executing getUserActiveCampaign', { userId, table: 'campaigns' });
     const startTime = Date.now();
     
     const { data, error } = await supabase
-        .from('campaign_participants')
-        .select('campaigns(*)')
-        .eq('user_id', userId)
-        .order('joined_at', { ascending: false })
+        .from('campaigns')
+        .select(`
+            *,
+            campaign_participants!inner(user_id, joined_at)
+        `)
+        .eq('campaign_participants.user_id', userId)
+        .order('campaign_participants(joined_at)', { ascending: false })
         .limit(1)
         .maybeSingle();
         
@@ -234,9 +225,7 @@ export const getUserActiveCampaign = async (userId: number): Promise<Campaign | 
             userId,
             durationMs: duration,
             error: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
+            code: error.code
         });
         throw error;
     }
@@ -247,18 +236,10 @@ export const getUserActiveCampaign = async (userId: number): Promise<Campaign | 
         hasData: !!data
     });
 
-    const campaignsValue = data && typeof data === 'object' && 'campaigns' in data
-        ? (data as { campaigns?: unknown }).campaigns
-        : undefined;
-    const campaign = Array.isArray(campaignsValue)
-        ? campaignsValue.find((item) => isCampaign(item))
-        : isCampaign(campaignsValue)
-            ? campaignsValue
-            : undefined;
-    if (!campaign) {
-        return null;
-    }
-    return campaign;
+    if (!data) return null;
+    
+    const { campaign_participants, ...campaignData } = data;
+    return campaignData as Campaign;
 };
 
 const isCampaign = (value: unknown): value is Campaign => {

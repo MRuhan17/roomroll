@@ -59,7 +59,12 @@ export const register = async (req: Request, res: Response) => {
         if (!newUser || newUser.length === 0) throw new Error('User creation failed');
 
         const token = jwt.sign(
-            { id: newUser[0].id, email: newUser[0].email },
+            { 
+                id: newUser[0].id, 
+                email: newUser[0].email,
+                role: 'authenticated',
+                sub: String(newUser[0].id)
+            },
             getJwtSecret(),
             { expiresIn: '24h' }
         );
@@ -108,7 +113,12 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            { id: user[0].id, email: user[0].email },
+            { 
+                id: user[0].id, 
+                email: user[0].email,
+                role: 'authenticated',
+                sub: String(user[0].id)
+            },
             getJwtSecret(),
             { expiresIn: '24h' }
         );

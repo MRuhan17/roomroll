@@ -3,13 +3,17 @@ import { DoorOpen, LogOut, Shield, Users, Flame, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { AmbientBackdrop, Embers, BrandMark } from "@/components/landing/LandingPrimitives";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function AppLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
+  const queryClient = useQueryClient();
+
   const onLogout = () => {
+    queryClient.clear();
     clearAuth();
     navigate("/login");
   };

@@ -561,62 +561,6 @@ export function CampaignDashboardPage() {
         </motion.div>
       </div>
 
-      {/* Dev & Admin Utility Deck */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mt-8 border border-tavern-border/30 bg-black/20 rounded-xl p-6 relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 p-16 bg-purple-500/2 blur-[40px] rounded-full pointer-events-none" />
-        <h3 className="text-lg font-display font-bold text-[#f5efe2] tracking-wide flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-400" />
-          Dev & Admin Utility Deck
-        </h3>
-        <p className="mt-2 text-xs text-[#cbc3b5]/60 font-serif leading-relaxed">
-          Verify and validate your SMTP pipelines, newsletter generation engines, and real-time delivery mechanisms in live dev mode.
-        </p>
-
-        <div className="mt-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <Button
-            onClick={async () => {
-              if (isAdminSending) return;
-              setIsAdminSending(true);
-              setAdminFeedback(null);
-              try {
-                const response = await api.post("/admin/send-test-chronicle");
-                const data = response.data;
-                setAdminFeedback({
-                  type: "success",
-                  message: `Deliveries complete! Sent: ${data.sentCount}, Failed: ${data.failedCount}, Duplicates: ${data.duplicateCount}.`
-                });
-              } catch (err: any) {
-                setAdminFeedback({
-                  type: "error",
-                  message: getApiErrorMessage(err, " Leyline failure. Could not dispatch test chronicle.")
-                });
-              } finally {
-                setIsAdminSending(false);
-              }
-            }}
-            disabled={isAdminSending}
-            className="bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 border border-purple-800/60 font-display uppercase tracking-widest text-xs h-10 px-5 flex items-center gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            {isAdminSending ? "Sending Chronicles..." : "Send Test Chronicle"}
-          </Button>
-
-          {adminFeedback && (
-            <div className={`text-xs px-4 py-2 rounded-lg border leading-relaxed font-serif ${
-              adminFeedback.type === "success" 
-                ? "bg-[#d5b45d]/10 border-[#d5b45d]/30 text-[#d5b45d]" 
-                : "bg-red-950/20 border-red-900/40 text-red-400"
-            }`}>
-              {adminFeedback.message}
-            </div>
-          )}
-        </div>
-      </motion.div>
     </section>
   );
 }
