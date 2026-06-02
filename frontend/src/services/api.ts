@@ -13,11 +13,30 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
+  console.log("Auth token present:", !!token);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Request failed:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      const msg = error.response.data?.message;
+      if (msg === 'MissingTokenError' || msg === 'TokenExpiredError' || msg === 'JsonWebTokenError') {
+         // Clear invalid auth state by removing items
+         localStorage.removeItem(TOKEN_KEY);
+         localStorage.removeItem("roomroll_user");
+         // We do not immediately window.location.href = '/login' here to allow 
+         // the UI to display the user-friendly error screen.
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export function getApiErrorMessage(error: unknown, fallback = "Something went wrong") {
   if (error instanceof AxiosError) {

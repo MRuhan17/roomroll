@@ -18,7 +18,7 @@ export const authenticateToken: RequestHandler = (req, res: Response, next: Next
     const jwtSecret = process.env.JWT_SECRET;
 
     if (!token) {
-        return res.status(401).json({ message: 'Authentication token required' });
+        return res.status(401).json({ message: 'MissingTokenError' });
     }
 
     if (!jwtSecret) {
@@ -27,7 +27,18 @@ export const authenticateToken: RequestHandler = (req, res: Response, next: Next
     }
 
     jwt.verify(token, jwtSecret, (err: any, user: any) => {
-        if (err) return res.status(403).json({ message: 'Invalid or expired token' });
+        if (err) {
+            console.error("JWT verification failed:", err.message);
+            let message = 'Invalid or expired token';
+            if (err.name === 'TokenExpiredError') {
+                message = 'TokenExpiredError';
+            } else if (err.name === 'JsonWebTokenError') {
+                message = 'JsonWebTokenError';
+            } else {
+                message = 'JsonWebTokenError';
+            }
+            return res.status(401).json({ message });
+        }
         authRequest.user = user;
         next();
     });

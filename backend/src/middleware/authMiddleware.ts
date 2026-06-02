@@ -17,7 +17,7 @@ export const authenticateRequest = (req: Request, res: Response, next: NextFunct
 
     if (!authHeader) {
         logger.warn('Authentication failed: Missing authorization header');
-        return res.status(401).json({ message: 'Missing authorization header' });
+        return res.status(401).json({ message: 'MissingTokenError' });
     }
 
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
@@ -32,11 +32,21 @@ export const authenticateRequest = (req: Request, res: Response, next: NextFunct
         
         return next();
     } catch (error: any) {
+        console.error("JWT verification failed:", error.message);
         logger.error('Authentication failed: Invalid or expired token', {
             error: error.message || error,
             tokenSnippet: token ? `${token.substring(0, 10)}...` : 'None'
         });
-        return res.status(401).json({ message: 'Invalid or expired token' });
+        
+        let message = 'Invalid or expired token';
+        if (error.name === 'TokenExpiredError') {
+            message = 'TokenExpiredError';
+        } else if (error.name === 'JsonWebTokenError') {
+            message = 'JsonWebTokenError';
+        } else {
+            message = 'JsonWebTokenError';
+        }
+        return res.status(401).json({ message });
     }
 };
 
