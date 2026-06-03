@@ -167,18 +167,39 @@ export const joinCampaign = async (campaignId: number, userId: number): Promise<
 export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
     logger.info('[DB QUERY] Executing getUserCampaigns', { userId, table: 'campaigns' });
     const startTime = Date.now();
-    
-    // Explicitly select campaigns where the user exists in campaign_participants
+
+    const { data: memberships, error: membershipError } = await supabase
+        .from('campaign_participants')
+        .select('campaign_id')
+        .eq('user_id', userId);
+
+    if (membershipError) {
+        const duration = Date.now() - startTime;
+        logger.error('[DB QUERY] getUserCampaigns membership lookup failed', {
+            userId,
+            durationMs: duration,
+            error: membershipError.message,
+            code: membershipError.code
+        });
+        throw membershipError;
+    }
+
+    const participantCampaignIds = Array.from(
+        new Set((memberships ?? []).map((membership: any) => Number(membership.campaign_id)).filter(Boolean))
+    );
+
+    const filters = [`dm_user_id.eq.${userId}`];
+    if (participantCampaignIds.length > 0) {
+        filters.push(`id.in.(${participantCampaignIds.join(',')})`);
+    }
+
     const { data, error } = await supabase
         .from('campaigns')
-        .select(`
-            *,
-            campaign_participants!inner(user_id)
-        `)
-        .eq('campaign_participants.user_id', userId);
-        
+        .select('*')
+        .or(filters.join(','));
+
     const duration = Date.now() - startTime;
-    
+
     if (error) {
         logger.error('[DB QUERY] getUserCampaigns failed', {
             userId,
@@ -188,11 +209,8 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
         });
         throw error;
     }
-    
-    const campaigns = (data || []).map((camp: any) => {
-        const { campaign_participants, ...campaignData } = camp;
-        return campaignData as Campaign;
-    });
+
+    const campaigns = (data ?? []) as Campaign[];
 
     logger.info('[DB QUERY] getUserCampaigns succeeded', {
         userId,
@@ -206,20 +224,64 @@ export const getUserCampaigns = async (userId: number): Promise<Campaign[]> => {
 export const getUserActiveCampaign = async (userId: number): Promise<Campaign | null> => {
     logger.info('[DB QUERY] Executing getUserActiveCampaign', { userId, table: 'campaigns' });
     const startTime = Date.now();
-    
-    const { data, error } = await supabase
-        .from('campaigns')
-        .select(`
-            *,
-            campaign_participants!inner(user_id, joined_at)
-        `)
-        .eq('campaign_participants.user_id', userId)
-        .order('campaign_participants(joined_at)', { ascending: false })
+
+    const { data: membership, error: membershipError } = await supabase
+        .from('campaign_participants')
+        .select('campaign_id, joined_at')
+        .eq('user_id', userId)
+        .order('joined_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-        
+
+    if (membershipError) {
+        const duration = Date.now() - startTime;
+        logger.error('[DB QUERY] getUserActiveCampaign membership lookup failed', {
+            userId,
+            durationMs: duration,
+            error: membershipError.message,
+            code: membershipError.code
+        });
+        throw membershipError;
+    }
+
+    if (!membership) {
+        const { data: ownedCampaign, error } = await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('dm_user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        const duration = Date.now() - startTime;
+
+        if (error) {
+            logger.error('[DB QUERY] getUserActiveCampaign failed', {
+                userId,
+                durationMs: duration,
+                error: error.message,
+                code: error.code
+            });
+            throw error;
+        }
+
+        logger.info('[DB QUERY] getUserActiveCampaign succeeded', {
+            userId,
+            durationMs: duration,
+            hasData: !!ownedCampaign
+        });
+
+        return (ownedCampaign as Campaign | null) ?? null;
+    }
+
+    const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', membership.campaign_id)
+        .maybeSingle();
+
     const duration = Date.now() - startTime;
-    
+
     if (error) {
         logger.error('[DB QUERY] getUserActiveCampaign failed', {
             userId,
@@ -229,17 +291,14 @@ export const getUserActiveCampaign = async (userId: number): Promise<Campaign | 
         });
         throw error;
     }
-    
+
     logger.info('[DB QUERY] getUserActiveCampaign succeeded', {
         userId,
         durationMs: duration,
         hasData: !!data
     });
 
-    if (!data) return null;
-    
-    const { campaign_participants, ...campaignData } = data;
-    return campaignData as Campaign;
+    return (data as Campaign | null) ?? null;
 };
 
 const isCampaign = (value: unknown): value is Campaign => {
