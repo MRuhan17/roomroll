@@ -9,16 +9,18 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getSessionRecaps, generateSessionRecap } from '@/services/campaigns';
+import { getCampaign, getSessionRecaps, generateSessionRecap } from '@/services/campaigns';
 import { getApiErrorMessage } from '@/services/api';
 import { SessionRecapCinematic } from '@/components/campaign/SessionRecapCinematic';
 import { AmbientBackdrop } from '@/components/landing/LandingPrimitives';
+import { useAuthStore } from '@/store/authStore';
 
 export function SessionRecapsPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const id = decodeCampaignId(campaignId);
+  const user = useAuthStore((state) => state.user);
 
   const [selectedRecap, setSelectedRecap] = useState<any | null>(null);
   const [regeneratingSessionId, setRegeneratingSessionId] = useState<string | null>(null);
@@ -31,6 +33,16 @@ export function SessionRecapsPage() {
     queryFn: () => getSessionRecaps(id),
     enabled: !!id,
   });
+
+  const campaignQuery = useQuery({
+    queryKey: ['campaign', id],
+    queryFn: () => getCampaign(id),
+    enabled: !!id,
+  });
+
+  const isDM =
+    campaignQuery.data?.campaign?.dm_user_id === user?.id ||
+    campaignQuery.data?.members?.some((member: any) => member.user_id === user?.id && member.role === 'DM');
 
   // Regenerate recap mutation
   const regenerateMutation = useMutation({
@@ -52,6 +64,10 @@ export function SessionRecapsPage() {
   });
 
   const handleRegenerate = (sessionId: string, tone: string) => {
+    if (!isDM) {
+      setFeedback("Only the DM can regenerate AI recaps.");
+      return;
+    }
     setRegeneratingSessionId(sessionId);
     regenerateMutation.mutate({ sessionId, tone });
   };
@@ -105,6 +121,12 @@ export function SessionRecapsPage() {
         <div className="rounded-md border border-[#d5b45d]/30 bg-[#d5b45d]/10 px-4 py-3 text-sm text-[#e9c97c] flex items-center justify-between animate-in fade-in duration-300">
           <span>{feedback}</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedback(null)} className="text-[#cbc3b5] hover:text-[#f5efe2] h-6 px-2 text-xs">Dismiss</Button>
+        </div>
+      )}
+
+      {!isDM && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Players can replay campaign recaps here. Only the DM can regenerate them with AI.
         </div>
       )}
 
@@ -185,35 +207,37 @@ export function SessionRecapsPage() {
                     </Button>
 
                     {/* Tone selectors & Regenerator */}
-                    <div className="flex items-center gap-2 border border-stone-800 bg-stone-950/60 p-1.5 rounded-lg">
-                      <select 
-                        value={selectedTone}
-                        onChange={(e) => setSelectedTone(e.target.value)}
-                        className="bg-transparent text-xs text-[#cbc3b5] border-none focus:ring-0 cursor-pointer pr-8 font-display uppercase"
-                        disabled={regeneratingSessionId === latestRecap.sessionId}
-                      >
-                        <option value="dramatic" className="bg-stone-950">Dramatic</option>
-                        <option value="heroic" className="bg-stone-950">Heroic</option>
-                        <option value="mysterious" className="bg-stone-950">Mysterious</option>
-                        <option value="tragic" className="bg-stone-950">Tragic</option>
-                        <option value="horror" className="bg-stone-950">Horror</option>
-                      </select>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={regeneratingSessionId === latestRecap.sessionId}
-                        onClick={() => handleRegenerate(latestRecap.sessionId, selectedTone)}
-                        className="h-7 text-xs text-[#cbc3b5] hover:text-[#f5efe2] hover:bg-stone-800 gap-1.5 px-2.5"
-                      >
-                        {regeneratingSessionId === latestRecap.sessionId ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#d5b45d]" />
-                        ) : (
-                          <Wand2 className="h-3.5 w-3.5 text-[#d5b45d]" />
-                        )}
-                        <span>{regeneratingSessionId === latestRecap.sessionId ? "Weaving..." : "Regenerate Recap"}</span>
-                      </Button>
-                    </div>
+                    {isDM ? (
+                      <div className="flex items-center gap-2 border border-stone-800 bg-stone-950/60 p-1.5 rounded-lg">
+                        <select 
+                          value={selectedTone}
+                          onChange={(e) => setSelectedTone(e.target.value)}
+                          className="bg-transparent text-xs text-[#cbc3b5] border-none focus:ring-0 cursor-pointer pr-8 font-display uppercase"
+                          disabled={regeneratingSessionId === latestRecap.sessionId}
+                        >
+                          <option value="dramatic" className="bg-stone-950">Dramatic</option>
+                          <option value="heroic" className="bg-stone-950">Heroic</option>
+                          <option value="mysterious" className="bg-stone-950">Mysterious</option>
+                          <option value="tragic" className="bg-stone-950">Tragic</option>
+                          <option value="horror" className="bg-stone-950">Horror</option>
+                        </select>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={regeneratingSessionId === latestRecap.sessionId}
+                          onClick={() => handleRegenerate(latestRecap.sessionId, selectedTone)}
+                          className="h-7 text-xs text-[#cbc3b5] hover:text-[#f5efe2] hover:bg-stone-800 gap-1.5 px-2.5"
+                        >
+                          {regeneratingSessionId === latestRecap.sessionId ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#d5b45d]" />
+                          ) : (
+                            <Wand2 className="h-3.5 w-3.5 text-[#d5b45d]" />
+                          )}
+                          <span>{regeneratingSessionId === latestRecap.sessionId ? "Weaving..." : "Regenerate Recap"}</span>
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -270,20 +294,22 @@ export function SessionRecapsPage() {
                       </Button>
 
                       {/* regeneration select for older logs */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={regeneratingSessionId === recap.sessionId}
-                        onClick={() => handleRegenerate(recap.sessionId, 'dramatic')}
-                        className="h-8 text-[11px] text-[#cbc3b5]/60 hover:text-[#f5efe2] hover:bg-stone-850"
-                      >
-                        {regeneratingSessionId === recap.sessionId ? (
-                          <RefreshCw className="h-3 w-3 animate-spin mr-1 text-[#d5b45d]" />
-                        ) : (
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                        )}
-                        Regen
-                      </Button>
+                      {isDM ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={regeneratingSessionId === recap.sessionId}
+                          onClick={() => handleRegenerate(recap.sessionId, 'dramatic')}
+                          className="h-8 text-[11px] text-[#cbc3b5]/60 hover:text-[#f5efe2] hover:bg-stone-850"
+                        >
+                          {regeneratingSessionId === recap.sessionId ? (
+                            <RefreshCw className="h-3 w-3 animate-spin mr-1 text-[#d5b45d]" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                          )}
+                          Regen
+                        </Button>
+                      ) : null}
                     </div>
                   </motion.div>
                 ))}

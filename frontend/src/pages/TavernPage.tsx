@@ -9,9 +9,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTavern, generateTavern, chatWithNpc, respondToFactionRecruitment, triggerTavernEvent } from "@/services/campaigns";
+import { getCampaign, getTavern, generateTavern, chatWithNpc, respondToFactionRecruitment, triggerTavernEvent } from "@/services/campaigns";
 import { getApiErrorMessage } from "@/services/api";
 import { AmbientBackdrop } from "@/components/landing/LandingPrimitives";
+import { useAuthStore } from "@/store/authStore";
 
 export interface DialogueMessage {
   sender: 'player' | 'npc';
@@ -55,6 +56,7 @@ export function TavernPage() {
   const id = decodeCampaignId(campaignId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((state) => state.user);
 
   const [activeNpc, setActiveNpc] = useState<Npc | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -71,7 +73,16 @@ export function TavernPage() {
     enabled: !!id,
   });
 
+  const campaignQuery = useQuery({
+    queryKey: ["campaign", id],
+    queryFn: () => getCampaign(id),
+    enabled: !!id,
+  });
+
   const tavern = tavernQuery.data?.tavern;
+  const isDM =
+    campaignQuery.data?.campaign?.dm_user_id === user?.id ||
+    campaignQuery.data?.members?.some((member: any) => member.user_id === user?.id && member.role === "DM");
 
   // Generate / Regenerate tavern mutation
   const generateMutation = useMutation({
@@ -144,6 +155,10 @@ export function TavernPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isDM) {
+      setFeedback("Only the DM can use Tavern AI interactions.");
+      return;
+    }
     if (!chatInput.trim() || !activeNpc || chatPending) return;
 
     const msg = chatInput.trim();
@@ -245,7 +260,7 @@ export function TavernPage() {
             variant="outline"
             size="sm"
             onClick={() => triggerEventMutation.mutate()}
-            disabled={triggerEventMutation.isPending}
+            disabled={triggerEventMutation.isPending || !isDM}
             className="border-[#d5b45d]/30 text-[#d5b45d] hover:bg-[#d5b45d]/10 gap-1.5 font-display text-xs uppercase tracking-wider"
           >
             <Compass className={`h-3.5 w-3.5 ${triggerEventMutation.isPending ? 'animate-spin' : ''}`} />
@@ -256,7 +271,7 @@ export function TavernPage() {
             variant="outline"
             size="sm"
             onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
+            disabled={generateMutation.isPending || !isDM}
             className="border-tavern-border text-[#cbc3b5]/80 hover:bg-white/5 gap-1.5 text-xs uppercase"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${generateMutation.isPending ? 'animate-spin' : ''}`} />
@@ -296,6 +311,12 @@ export function TavernPage() {
         </div>
       )}
 
+      {!isDM && (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Tavern AI controls are DM-only. Players can still read the tavern state and campaign recap history.
+        </div>
+      )}
+
       {/* loading indicator */}
       {tavernQuery.isLoading ? (
         <div className="space-y-6">
@@ -310,11 +331,15 @@ export function TavernPage() {
           <Flame className="h-12 w-12 text-[#cbc3b5]/30 mx-auto mb-4" />
           <CardTitle className="text-2xl font-display text-[#f5efe2]">Tavern Is Sealed</CardTitle>
           <CardDescription className="text-base font-serif italic text-[#cbc3b5]/60 max-w-md mx-auto mt-2 leading-relaxed">
-            The tavern has not been raised yet in this corner of the realm. Click the button to materialise your persistent social hub.
+            {isDM
+              ? "The tavern has not been raised yet in this corner of the realm. Click the button to materialise your persistent social hub."
+              : "The tavern has not been raised yet in this corner of the realm. Ask the DM to generate it first."}
           </CardDescription>
-          <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} className="mt-6 bg-[#ab211f] hover:bg-[#8f1917] font-display uppercase tracking-widest text-xs">
-            {generateMutation.isPending ? "Materialising..." : "Materialise Tavern"}
-          </Button>
+          {isDM ? (
+            <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending} className="mt-6 bg-[#ab211f] hover:bg-[#8f1917] font-display uppercase tracking-widest text-xs">
+              {generateMutation.isPending ? "Materialising..." : "Materialise Tavern"}
+            </Button>
+          ) : null}
         </Card>
       ) : (
         <div className="space-y-8">
@@ -362,8 +387,14 @@ export function TavernPage() {
                     <motion.div
                       key={npc.id}
                       whileHover={{ y: -3 }}
-                      className="border border-tavern-border/55 bg-black/25 hover:bg-stone-900/20 hover:border-[#d5b45d]/35 transition-all duration-300 rounded-xl p-5 flex flex-col justify-between space-y-4 relative overflow-hidden cursor-pointer"
-                      onClick={() => setActiveNpc(npc)}
+                      className={isDM
+                        ? "border border-tavern-border/55 bg-black/25 hover:bg-stone-900/20 hover:border-[#d5b45d]/35 transition-all duration-300 rounded-xl p-5 flex flex-col justify-between space-y-4 relative overflow-hidden cursor-pointer"
+                        : "border border-tavern-border/55 bg-black/25 rounded-xl p-5 flex flex-col justify-between space-y-4 relative overflow-hidden opacity-90"}
+                      onClick={() => {
+                        if (isDM) {
+                          setActiveNpc(npc);
+                        }
+                      }}
                     >
                       <div className="absolute top-0 right-0 p-16 bg-[#d5b45d]/0.5 blur-[30px] rounded-full pointer-events-none" />
 
@@ -394,6 +425,7 @@ export function TavernPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={!isDM}
                           className="text-[#d5b45d] hover:text-[#e9c97c] h-7 px-2.5 text-xs font-display uppercase tracking-widest gap-1"
                         >
                           Talk
@@ -486,6 +518,7 @@ export function TavernPage() {
                       <div className="flex gap-2 pt-1.5">
                         <Button
                           size="sm"
+                          disabled={!isDM}
                           onClick={() => respondFactionMutation.mutate({ encounterId: enc.id, action: 'accept' })}
                           className="flex-1 bg-[#ab211f] hover:bg-[#8f1917] text-white text-xs uppercase font-display tracking-wider"
                         >
@@ -494,6 +527,7 @@ export function TavernPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={!isDM}
                           onClick={() => respondFactionMutation.mutate({ encounterId: enc.id, action: 'decline' })}
                           className="border-tavern-border text-[#cbc3b5] hover:bg-white/5 text-xs uppercase font-display"
                         >
@@ -648,7 +682,7 @@ export function TavernPage() {
                   />
                   <Button
                     type="submit"
-                    disabled={chatPending || !chatInput.trim()}
+                    disabled={chatPending || !chatInput.trim() || !isDM}
                     className="bg-[#ab211f] hover:bg-[#8f1917] text-white p-2.5 rounded-lg border border-[#ab211f]/45"
                   >
                     <Send className="h-4 w-4" />

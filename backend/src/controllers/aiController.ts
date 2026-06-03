@@ -20,8 +20,8 @@ export const generateNarrationHandler = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'campaignId and playerAction required' });
     }
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
     }
     try {
         const narration = await generateNarration({

@@ -1514,7 +1514,9 @@ export function RoomPage() {
                 AI Interaction Panel
               </CardTitle>
               <CardDescription>
-                Feed the AI a player action, set the tone, and trigger narration or world shifts.
+                {isDM
+                  ? "Feed the AI a player action, set the tone, and trigger narration or world shifts."
+                  : "Players can follow the session here, but only the DM can trigger AI actions."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1527,6 +1529,7 @@ export function RoomPage() {
                   value={playerAction}
                   onChange={(event) => setPlayerAction(event.target.value)}
                   placeholder="The ranger steps into the torchlight and offers the relic to the priestess..."
+                  disabled={!isDM}
                   className="min-h-[120px] w-full resize-none rounded-xl border border-tavern-border bg-transparent px-3 py-3 text-sm text-[#f5efe2] outline-none placeholder:text-[#cbc3b5]/70 focus:border-amber-300/40"
                 />
               </div>
@@ -1539,6 +1542,7 @@ export function RoomPage() {
                       key={tone.value}
                       type="button"
                       onClick={() => setNarrationTone(tone.value)}
+                      disabled={!isDM}
                       className={cn(
                         "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] transition",
                         narrationTone === tone.value
@@ -1556,7 +1560,7 @@ export function RoomPage() {
                 <Button
                   onClick={handleRequestNarration}
                   className="h-11 justify-center gap-2 bg-amber-500 text-[#cbc3b5]/70 hover:bg-amber-400"
-                  disabled={!isSocketConnected || aiPending.narration}
+                  disabled={!isSocketConnected || aiPending.narration || !isDM}
                 >
                   {aiPending.narration ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
                   Ask for narration
@@ -1577,6 +1581,8 @@ export function RoomPage() {
                   <PresenceLine participants={typingParticipants} />
                 ) : showNarrationThinking ? (
                   <span>The AI is studying the table and building the next beat.</span>
+                ) : !isDM ? (
+                  <span>Players can use campaign recaps to review what happened, but AI controls stay with the DM.</span>
                 ) : (
                   <span>The panel is ready for the next prompt.</span>
                 )}

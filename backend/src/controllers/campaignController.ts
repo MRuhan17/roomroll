@@ -579,8 +579,8 @@ export const generateSessionRecapHandler = async (req: Request, res: Response) =
     }
 
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member.' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required to generate recap.' });
     }
 
     const { tone } = req.body as { tone?: string };
@@ -694,6 +694,26 @@ export const getTavernHandler = async (req: Request, res: Response) => {
         return res.status(403).json({ message: 'Not a campaign member' });
     }
     try {
+        const { supabase } = await import('../config/db');
+        const { data: campaignData, error: campaignError } = await supabase
+            .from('campaigns')
+            .select('current_session_state')
+            .eq('id', campaignId)
+            .single();
+
+        if (campaignError || !campaignData) {
+            return res.status(404).json({ message: 'Campaign not found' });
+        }
+
+        const state = campaignData.current_session_state as any || {};
+        if (state.tavern?.name && state.tavern?.npcs) {
+            return res.json({ tavern: state.tavern });
+        }
+
+        if (member.role !== 'DM') {
+            return res.status(403).json({ message: 'DM role required to generate tavern state.' });
+        }
+
         const { getOrGenerateTavern } = await import('../services/tavernService');
         const tavern = await getOrGenerateTavern(campaignId);
         return res.json({ tavern });
@@ -713,8 +733,8 @@ export const generateTavernHandler = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Campaign ID required' });
     }
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
     }
     try {
         const { generateProceduralTavern } = await import('../services/tavernService');
@@ -756,8 +776,8 @@ export const chatWithNpcHandler = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Campaign ID, NPC ID, and message are required' });
     }
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
     }
     try {
         const { chatWithNpc } = await import('../services/tavernService');
@@ -782,8 +802,8 @@ export const respondToFactionRecruitmentHandler = async (req: Request, res: Resp
         return res.status(400).json({ message: 'Campaign ID, encounter ID, and action are required' });
     }
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
     }
     try {
         const { respondToFactionRecruitment } = await import('../services/tavernService');
@@ -805,8 +825,8 @@ export const triggerTavernEventHandler = async (req: Request, res: Response) => 
         return res.status(400).json({ message: 'Campaign ID required' });
     }
     const member = await getMember(campaignId, user.id);
-    if (!member) {
-        return res.status(403).json({ message: 'Not a campaign member' });
+    if (!member || member.role !== 'DM') {
+        return res.status(403).json({ message: 'DM role required' });
     }
     try {
         const { triggerTavernEvent } = await import('../services/tavernService');

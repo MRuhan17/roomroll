@@ -306,6 +306,10 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.text) {
                 return;
             }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
+                return;
+            }
             await createCampaignEvent(campaignId, 'NEW_NARRATION', { text: payload.text }, user.id);
             await appendNarrationLog(campaignId, {
                 created_at: new Date().toISOString(),
@@ -321,6 +325,10 @@ export const registerSocketHandlers = (io: Server) => {
         socket.on(SocketEvents.RequestAiNarration, async (payload: { playerAction?: string; tone?: string }) => {
             const campaignId = socket.data.campaignId as number | undefined;
             if (!campaignId || !payload?.playerAction) {
+                return;
+            }
+            if (socket.data.role !== 'DM') {
+                socket.emit(SocketEvents.Error, { message: 'DM role required' });
                 return;
             }
             const narration = await generateNarration({
