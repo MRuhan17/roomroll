@@ -62,6 +62,13 @@ export function TermsOfServicePage() {
                 You may also terminate your account at any time, which will result in the immediate and unrecoverable deletion of your data.
               </p>
             </SurfaceCard>
+
+            <SurfaceCard className="p-8 md:p-10">
+              <h2 className="font-display text-[2rem] uppercase text-[#f1e9db] mb-4">5. Contact Us</h2>
+              <p className="text-[#cbc3b5]/82 leading-8">
+                If you have questions about these Terms, please contact us at <a href="mailto:roomrollhq@gmail.com" className="text-primary hover:underline">roomrollhq@gmail.com</a>.
+              </p>
+            </SurfaceCard>
           </Reveal>
         </div>
       </main>

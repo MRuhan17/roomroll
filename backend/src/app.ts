@@ -22,6 +22,10 @@ import loreRoutes from './routes/loreRoutes';
 
 import { createLogger } from './lib/logger';
 import { requestLogger } from './middleware/requestLogger';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 const logger = createLogger('app');
 
@@ -30,7 +34,30 @@ import { corsOptions } from './config/cors';
 export function createApp() {
     const app: Express = express();
 
+    // Sentry initialization
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN || '',
+        integrations: [
+            nodeProfilingIntegration(),
+        ],
+        tracesSampleRate: 1.0,
+        profilesSampleRate: 1.0,
+        environment: process.env.NODE_ENV || 'development'
+    });
+
     app.set('trust proxy', 1);
+
+    // Apply Helmet for security headers
+    app.use(helmet());
+
+    // Apply Rate Limiting
+    const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        limit: 500, // Limit each IP to 500 requests per `window` (here, per 15 minutes).
+        standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+        legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+    });
+    app.use('/api', limiter);
 
     app.use(cors(corsOptions));
     app.use(express.json());
@@ -65,6 +92,10 @@ export function createApp() {
         if (process.env.NODE_ENV === 'test') {
             console.error('UNHANDLED TEST ERROR:', error);
         }
+        
+        // Report to Sentry
+        Sentry.captureException(error);
+
         logger.error('Unhandled application error', {
             method: req.method,
             path: req.originalUrl,
@@ -72,6 +103,9 @@ export function createApp() {
         });
         res.status(500).json({ message: 'Unexpected server error' });
     });
+
+    // The error handler must be before any other error middleware and after all controllers
+    Sentry.setupExpressErrorHandler(app);
 
     return app;
 }

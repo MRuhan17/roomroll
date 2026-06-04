@@ -28,6 +28,47 @@ const checkCooldown = (userId: number): boolean => {
     return true;
 };
 
+export const checkAiQuota = async (userId: number, campaignId?: number): Promise<boolean> => {
+    const dailyLimit = Number(process.env.AI_DAILY_LIMIT || '50');
+    const monthlyLimit = Number(process.env.AI_MONTHLY_LIMIT || '500');
+
+    const { supabase } = await import('../config/db');
+    const now = new Date();
+    
+    // Check daily limit
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const { count: dailyCount, error: dailyError } = await supabase
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfDay);
+        
+    if (!dailyError && dailyCount !== null && dailyCount >= dailyLimit) {
+        return false;
+    }
+
+    // Check monthly limit
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count: monthlyCount, error: monthlyError } = await supabase
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth);
+        
+    if (!monthlyError && monthlyCount !== null && monthlyCount >= monthlyLimit) {
+        return false;
+    }
+
+    // Log the usage
+    await supabase.from('ai_usage_logs').insert([{
+        user_id: userId,
+        campaign_id: campaignId ?? null,
+        action_type: 'api_call'
+    }]);
+
+    return true;
+};
+
 const buildFallbackNarration = (playerAction: string): string => {
     return `The world responds immediately—${playerAction}. The scene shifts with a cinematic beat as the consequences ripple outward.`;
 };
@@ -57,7 +98,15 @@ export const sanitizePlayerAction = (action: string): string => {
     return sanitized;
 };
 
-export const callOpenAi = async (prompt: string): Promise<string | null> => {
+export const callOpenAi = async (prompt: string, userId?: number, campaignId?: number): Promise<string | null> => {
+    if (userId) {
+        const hasQuota = await checkAiQuota(userId, campaignId);
+        if (!hasQuota) {
+            console.warn(`[ai]: User ${userId} exceeded AI quota`);
+            throw new Error('AI Quota Exceeded. You have reached your daily or monthly limit.');
+        }
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
     if (!apiKey) {
@@ -135,7 +184,7 @@ Return exactly in JSON format:
 { "mood": "selected_mood", "ambience": "selected_ambience" }
 Do not return any other text.`;
 
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, undefined, undefined); // Internal background check
     if (!response) {
         return { mood: 'tension', ambience: 'dungeon echoes' };
     }
@@ -175,7 +224,7 @@ Respond EXACTLY in JSON format:
 }
 Do not return any other text.`;
 
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, undefined, campaignId); // Internal background check
     if (!response) return null;
     try {
         const cleaned = response.replace(/```json|```/g, '').trim();
@@ -201,7 +250,7 @@ export const generateNarration = async (request: NarrationRequest): Promise<Narr
     const sanitizedAction = sanitizePlayerAction(request.playerAction);
     const prompt = buildNarrationPrompt(snapshot, sanitizedAction, request.tone);
 
-    const aiNarration = await callOpenAi(prompt);
+    const aiNarration = await callOpenAi(prompt, request.userId, request.campaignId);
     const narration = aiNarration ?? buildFallbackNarration(sanitizedAction);
     const usedFallback = !aiNarration;
 
@@ -274,7 +323,7 @@ export const generateAiWorldEvent = async (campaignId: number, userId: number): 
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = `Based on the active campaign "${snapshot.campaign?.name}", generate a sudden, dramatic world event. Return exactly in JSON format: { "title": "Event Name", "description": "1-2 sentences of the event" }.`;
     
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, userId, campaignId);
     if (!response) {
         return { title: 'The World Trembles', description: 'A sudden tremor shakes the land.' };
     }
@@ -290,7 +339,7 @@ export const generateAiWorldEvent = async (campaignId: number, userId: number): 
 export const updateNpcRelationship = async (campaignId: number, npcName: string, interactionContext: string): Promise<void> => {
     // Generate a summarized memory for the NPC relationship based on the player interaction
     const prompt = `Summarize this interaction with NPC ${npcName} into a core relationship memory fact: ${interactionContext}`;
-    const summary = await callOpenAi(prompt) ?? `Interacted with ${npcName}`;
+    const summary = await callOpenAi(prompt, undefined, campaignId) ?? `Interacted with ${npcName}`;
     
     await createCampaignMemory(campaignId, `Relationship updated with ${npcName}`, [
         { type: 'npc_relationship', npc: npcName, memory: summary }
@@ -301,21 +350,21 @@ export const generateNpcDialogue = async (campaignId: number, userId: number, np
     if (!checkCooldown(userId)) throw new Error('AI is on cooldown.');
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildNpcDialoguePrompt(snapshot, npcName, playerInput);
-    return await callOpenAi(prompt) ?? `*${npcName} remains silent.*`;
+    return await callOpenAi(prompt, userId, campaignId) ?? `*${npcName} remains silent.*`;
 };
 
 export const generateEnvironmentDescription = async (campaignId: number, userId: number, locationName: string): Promise<string> => {
     if (!checkCooldown(userId)) throw new Error('AI is on cooldown.');
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildEnvironmentPrompt(snapshot, locationName);
-    return await callOpenAi(prompt) ?? `You see ${locationName}.`;
+    return await callOpenAi(prompt, userId, campaignId) ?? `You see ${locationName}.`;
 };
 
 export const generateQuestHook = async (campaignId: number, userId: number): Promise<{ title: string; description: string }> => {
     if (!checkCooldown(userId)) throw new Error('AI is on cooldown.');
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildQuestHookPrompt(snapshot);
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, userId, campaignId);
     try {
         const parsed = JSON.parse(response?.replace(/```json|```/g, '').trim() ?? '{}');
         return { title: parsed.title || 'A New Path', description: parsed.description || 'A mysterious opportunity arises.' };
@@ -328,14 +377,14 @@ export const generateFactionReaction = async (campaignId: number, userId: number
     if (!checkCooldown(userId)) throw new Error('AI is on cooldown.');
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildFactionReactionPrompt(snapshot, factionName, event);
-    return await callOpenAi(prompt) ?? `The ${factionName} takes note of the event.`;
+    return await callOpenAi(prompt, userId, campaignId) ?? `The ${factionName} takes note of the event.`;
 };
 
 export const generateSessionSummary = async (campaignId: number, userId: number): Promise<string> => {
     if (!checkCooldown(userId)) throw new Error('AI is on cooldown.');
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildSessionSummaryPrompt(snapshot);
-    return await callOpenAi(prompt) ?? `The party continued their adventure.`;
+    return await callOpenAi(prompt, userId, campaignId) ?? `The party continued their adventure.`;
 };
 
 export const generateFutureStoryPreparation = async (campaignId: number, userId: number): Promise<any[]> => {
@@ -389,7 +438,7 @@ Ensure the keys match exactly:
   ...
 ]`;
 
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, userId, campaignId);
     if (!response) {
         throw new Error('Failed to generate story points from AI.');
     }
@@ -486,7 +535,7 @@ export const generateCinematicRecap = async (
 
     // 4. Build prompt & call OpenAI
     const prompt = buildCinematicRecapPrompt(campaignName, timelineStr, tone);
-    const aiResponse = await callOpenAi(prompt);
+    const aiResponse = await callOpenAi(prompt, userId, campaignId);
 
     let recapJson: any = null;
     if (aiResponse) {
@@ -552,7 +601,7 @@ export const detectDerailment = async (campaignId: number): Promise<{
 }> => {
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildDetectDerailmentPrompt(snapshot);
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, undefined, campaignId); // Internal background check
     
     if (!response) {
         return { is_derailment: false, severity: 'none', situation_title: null, description: null };
@@ -576,7 +625,7 @@ export const detectDerailment = async (campaignId: number): Promise<{
 export const generateRecoveryPaths = async (campaignId: number, derailmentContext: string): Promise<any[]> => {
     const snapshot = await getCampaignSnapshot(campaignId);
     const prompt = buildPanicRecoveryPrompt(snapshot, derailmentContext);
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, undefined, campaignId); // Internal background check
     
     if (!response) {
         throw new Error('Failed to generate recovery paths from AI.');
@@ -680,7 +729,7 @@ export const generateCinematicRollNarration = async (
         tone
     );
 
-    const response = await callOpenAi(prompt);
+    const response = await callOpenAi(prompt, undefined, snapshot.campaign?.id);
     if (!response) {
         return `The dice tumble to a halt, carving a new beat in the chronicle's history.`;
     }

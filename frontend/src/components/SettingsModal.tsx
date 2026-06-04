@@ -11,8 +11,8 @@ export function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-[#d5b45d]/20 bg-[#111115] shadow-2xl flex flex-col md:flex-row h-[80vh] md:h-auto max-h-[600px]">
         
         {/* Sidebar */}

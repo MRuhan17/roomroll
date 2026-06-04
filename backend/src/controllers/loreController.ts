@@ -200,9 +200,9 @@ export const discoverEntity = async (req: Request, res: Response): Promise<void>
 
         // Mark as discovered based on type
         if (entity_type === 'lore') {
-            await supabase.from('campaign_lore_entries').update({ is_discovered: true }).eq('id', entity_id);
+            await supabase.from('campaign_lore_entries').update({ is_discovered: true }).eq('id', entity_id).eq('campaign_id', campaignId);
         } else if (entity_type === 'faction') {
-            await supabase.from('campaign_factions').update({ is_discovered: true }).eq('id', entity_id);
+            await supabase.from('campaign_factions').update({ is_discovered: true }).eq('id', entity_id).eq('campaign_id', campaignId);
         }
 
         // Record discovery

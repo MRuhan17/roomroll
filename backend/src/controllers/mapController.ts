@@ -33,6 +33,19 @@ export const createMapHandler = async (req: Request, res: Response) => {
         if (matches && matches.length === 3) {
             const mimeType = matches[1];
             const buffer = Buffer.from(matches[2], 'base64');
+            
+            // File Upload Security Checks
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowedMimeTypes.includes(mimeType)) {
+                return res.status(400).json({ message: 'Invalid file type. Only JPEG, PNG, and WEBP are allowed.' });
+            }
+            
+            // 5MB limit
+            const maxSize = 5 * 1024 * 1024;
+            if (buffer.length > maxSize) {
+                return res.status(400).json({ message: 'File is too large. Maximum size is 5MB.' });
+            }
+
             const fileName = `${campaignId}/${Date.now()}-${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
             
             const { error: uploadError } = await supabase.storage

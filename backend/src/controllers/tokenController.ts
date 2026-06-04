@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { createToken, moveToken, updateToken } from '../services/tokenService';
 import { getMember } from '../services/campaignService';
+import { supabase } from '../config/db';
 
 export const createTokenHandler = async (req: Request, res: Response) => {
     const user = req.user;
@@ -33,7 +34,8 @@ export const createTokenHandler = async (req: Request, res: Response) => {
             hpCurrent,
             hpMax,
             position,
-            isHidden
+            isHidden,
+            userId: user.id
         });
         return res.status(201).json({ token });
     } catch (error) {
@@ -56,6 +58,14 @@ export const moveTokenHandler = async (req: Request, res: Response) => {
     if (!member) {
         return res.status(403).json({ message: 'Not a campaign member' });
     }
+
+    // Check token ownership
+    const { data: existingToken } = await supabase.from('map_tokens').select('user_id').eq('id', tokenId).single();
+    if (!existingToken) return res.status(404).json({ message: 'Token not found' });
+    if (member.role !== 'DM' && existingToken.user_id !== user.id) {
+        return res.status(403).json({ message: 'Not authorized to move this token' });
+    }
+
     try {
         const token = await moveToken(campaignId, tokenId, position);
         return res.json({ token });
@@ -84,6 +94,14 @@ export const updateTokenHandler = async (req: Request, res: Response) => {
     if (!member) {
         return res.status(403).json({ message: 'Not a campaign member' });
     }
+
+    // Check token ownership
+    const { data: existingToken } = await supabase.from('map_tokens').select('user_id').eq('id', tokenId).single();
+    if (!existingToken) return res.status(404).json({ message: 'Token not found' });
+    if (member.role !== 'DM' && existingToken.user_id !== user.id) {
+        return res.status(403).json({ message: 'Not authorized to update this token' });
+    }
+
     try {
         const token = await updateToken(campaignId, tokenId, {
             hp_current: hpCurrent,

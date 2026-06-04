@@ -55,7 +55,7 @@ export function AccessibilityPage() {
                 If you encounter any accessibility barriers on RoomRoll, please let us know. 
                 We welcome your feedback and are dedicated to resolving issues promptly.
                 <br /><br />
-                Email: <a href="mailto:accessibility@roomroll.co.in" className="text-[#d5b45d] hover:underline">accessibility@roomroll.co.in</a>
+                Email: <a href="mailto:roomrollhq@gmail.com" className="text-[#d5b45d] hover:underline">roomrollhq@gmail.com</a>
               </p>
             </SurfaceCard>
           </Reveal>

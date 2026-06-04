@@ -11,6 +11,7 @@ export interface CreateTokenInput {
     hpMax?: number;
     position: MapTokenPosition;
     isHidden?: boolean;
+    userId: number;
 }
 
 export const createToken = async (input: CreateTokenInput): Promise<MapToken> => {
@@ -28,7 +29,8 @@ export const createToken = async (input: CreateTokenInput): Promise<MapToken> =>
                 hp_current: input.hpCurrent ?? null,
                 hp_max: input.hpMax ?? null,
                 position: input.position,
-                is_hidden: input.isHidden ?? false
+                is_hidden: input.isHidden ?? false,
+                user_id: input.userId
             }
         ])
         .select('*')

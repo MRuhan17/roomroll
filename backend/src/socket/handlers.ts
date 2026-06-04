@@ -203,6 +203,15 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.tokenId || !payload?.position) {
                 return;
             }
+            
+            const { supabase } = await import('../config/db');
+            const { data: existingToken } = await supabase.from('map_tokens').select('user_id').eq('id', payload.tokenId).single();
+            if (!existingToken) return;
+            if (socket.data.role !== 'DM' && existingToken.user_id !== user.id) {
+                socket.emit(SocketEvents.Error, { message: 'Not authorized to move this token' });
+                return;
+            }
+
             const token = await moveToken(campaignId, payload.tokenId, payload.position);
             io.to(campaignRoom(campaignId)).emit(SocketEvents.TokenMoved, {
                 userId: user.id,
@@ -236,6 +245,15 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.tokenId) {
                 return;
             }
+            
+            const { supabase } = await import('../config/db');
+            const { data: existingToken } = await supabase.from('map_tokens').select('user_id').eq('id', payload.tokenId).single();
+            if (!existingToken) return;
+            if (socket.data.role !== 'DM' && existingToken.user_id !== user.id) {
+                socket.emit(SocketEvents.Error, { message: 'Not authorized to update this token' });
+                return;
+            }
+
             const token = await updateToken(campaignId, payload.tokenId, {
                 hp_current: payload.hpCurrent,
                 hp_max: payload.hpMax,
@@ -253,6 +271,15 @@ export const registerSocketHandlers = (io: Server) => {
             if (!campaignId || !payload?.tokenId) {
                 return;
             }
+            
+            const { supabase } = await import('../config/db');
+            const { data: existingToken } = await supabase.from('map_tokens').select('user_id').eq('id', payload.tokenId).single();
+            if (!existingToken) return;
+            if (socket.data.role !== 'DM' && existingToken.user_id !== user.id) {
+                socket.emit(SocketEvents.Error, { message: 'Not authorized to delete this token' });
+                return;
+            }
+
             await deleteToken(campaignId, payload.tokenId);
             io.to(campaignRoom(campaignId)).emit(SocketEvents.TokenDeleted, {
                 userId: user.id,
