@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAccessibilityStore } from "@/store/cookieStore"; // Wait, I should import from accessibilityStore
+import { useAccessibilityStore } from "@/store/accessibilityStore";
 import { X, Settings, Download, Trash2, AlertTriangle } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { api, getApiErrorMessage } from "@/services/api";

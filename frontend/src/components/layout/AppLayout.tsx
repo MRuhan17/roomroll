@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { DoorOpen, LogOut, Shield, Users, Flame, BookOpen } from "lucide-react";
+import { DoorOpen, LogOut, Shield, Users, Flame, BookOpen, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { AmbientBackdrop, Embers, BrandMark } from "@/components/landing/LandingPrimitives";
