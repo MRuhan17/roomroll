@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import { verifyToken } from '../services/authService';
 import { presenceStore } from '../campaign-engine/presenceStore';
 import { getCampaignSnapshot } from '../services/campaignStateService';
@@ -60,6 +61,25 @@ export const registerSocketHandlers = (io: Server) => {
         try {
             const user = verifyToken(token);
             socket.data.user = user;
+            
+            // Set up proactive disconnection when token expires
+            const decoded = jwt.decode(token) as jwt.JwtPayload;
+            if (decoded && decoded.exp) {
+                const expiresInMs = (decoded.exp * 1000) - Date.now();
+                if (expiresInMs > 0) {
+                    const timer = setTimeout(() => {
+                        logger.info('Proactively disconnecting socket due to token expiration', { socketId: socket.id, userId: user.id });
+                        // Let the client know it expired specifically
+                        socket.emit(SocketEvents.Error, { message: 'TokenExpiredError' });
+                        socket.disconnect(true);
+                    }, expiresInMs);
+                    
+                    socket.on('disconnect', () => {
+                        clearTimeout(timer);
+                    });
+                }
+            }
+            
             return next();
         } catch (error) {
             return next(new Error('Unauthorized'));
@@ -226,6 +246,7 @@ export const registerSocketHandlers = (io: Server) => {
             }
             const token = await createToken({
                 campaignId,
+                userId: user.id,
                 mapId: payload.mapId,
                 tokenType: payload.tokenType,
                 label: payload.label,

@@ -26,7 +26,7 @@ api.interceptors.response.use(
     console.error("API Request failed:", error.response?.data || error.message);
     if (error.response?.status === 401) {
       const msg = error.response.data?.message;
-      if (msg === 'MissingTokenError' || msg === 'TokenExpiredError' || msg === 'JsonWebTokenError') {
+      if (msg === 'MissingTokenError' || msg === 'TokenExpiredError' || msg === 'JsonWebTokenError' || msg === 'Invalid or expired token') {
          // Clear invalid auth state by removing items
          localStorage.removeItem(TOKEN_KEY);
          localStorage.removeItem("roomroll_user");

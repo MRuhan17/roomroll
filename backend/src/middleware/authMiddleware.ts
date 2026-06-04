@@ -38,15 +38,7 @@ export const authenticateRequest = (req: Request, res: Response, next: NextFunct
             tokenSnippet: token ? `${token.substring(0, 10)}...` : 'None'
         });
         
-        let message = 'Invalid or expired token';
-        if (error.name === 'TokenExpiredError') {
-            message = 'TokenExpiredError';
-        } else if (error.name === 'JsonWebTokenError') {
-            message = 'JsonWebTokenError';
-        } else {
-            message = 'JsonWebTokenError';
-        }
-        return res.status(401).json({ message });
+        return res.status(401).json({ message: 'Invalid or expired token' });
     }
 };
 

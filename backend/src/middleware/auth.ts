@@ -29,15 +29,7 @@ export const authenticateToken: RequestHandler = (req, res: Response, next: Next
     jwt.verify(token, jwtSecret, (err: any, user: any) => {
         if (err) {
             console.error("JWT verification failed:", err.message);
-            let message = 'Invalid or expired token';
-            if (err.name === 'TokenExpiredError') {
-                message = 'TokenExpiredError';
-            } else if (err.name === 'JsonWebTokenError') {
-                message = 'JsonWebTokenError';
-            } else {
-                message = 'JsonWebTokenError';
-            }
-            return res.status(401).json({ message });
+            return res.status(401).json({ message: 'Invalid or expired token' });
         }
         authRequest.user = user;
         next();
