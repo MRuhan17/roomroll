@@ -13,7 +13,7 @@ async function applyMigration() {
     
     const adminSupabase = createClient(supabaseUrl, serviceKey);
     
-    const migrationSql = fs.readFileSync(path.resolve(__dirname, 'src/migrations/rls_policies_v2.sql'), 'utf-8');
+    const migrationSql = fs.readFileSync(path.resolve(__dirname, 'src/migrations/compliance_tracking.sql'), 'utf-8');
     
     const { error } = await adminSupabase.rpc('exec_sql', { query: migrationSql });
     

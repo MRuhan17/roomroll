@@ -205,6 +205,14 @@ const footerColumns = [
     title: "The Codex",
     links: ["Lore Wiki", "Press", "Manifesto", "Enter the Table"],
   },
+  {
+    title: "Legal",
+    links: [
+      { name: "Privacy Policy", href: "/privacy" },
+      { name: "Terms of Service", href: "/terms" },
+      { name: "Accessibility", href: "/accessibility" }
+    ],
+  },
 ];
 
 function NavLink({
@@ -855,11 +863,26 @@ export function LandingPage() {
                       {column.title}
                     </p>
                     <div className="mt-5 space-y-4">
-                      {column.links.filter(l => l !== "Waitlist").map((link) => (
-                        <p key={link} className="text-base text-[#cdc5b7]/76 cursor-default">
-                          {link}
-                        </p>
-                      ))}
+                      {column.links.map((link, i) => {
+                        if (typeof link === 'string') {
+                          if (link === "Waitlist") return null;
+                          return (
+                            <p key={link} className="text-base text-[#cdc5b7]/76 cursor-default">
+                              {link}
+                            </p>
+                          );
+                        } else {
+                          return (
+                            <a 
+                              key={link.name} 
+                              href={link.href}
+                              className="block text-base text-[#cdc5b7]/76 hover:text-[#d5b45d] transition-colors"
+                            >
+                              {link.name}
+                            </a>
+                          );
+                        }
+                      })}
                     </div>
                   </Reveal>
                 ))}

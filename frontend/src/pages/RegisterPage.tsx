@@ -22,6 +22,8 @@ export function RegisterPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
@@ -53,7 +55,7 @@ export function RegisterPage() {
             onSubmit={(event) => {
               event.preventDefault();
               setError(null);
-              mutation.mutate({ displayName, email, password });
+              mutation.mutate({ displayName, email, password, termsAccepted, privacyAccepted });
             }}
           >
             <div className="space-y-2">
@@ -97,7 +99,36 @@ export function RegisterPage() {
                 required
               />
             </div>
-            {error ? <p className="text-sm text-accent">{error}</p> : null}
+            
+            <div className="flex items-start space-x-2 mt-4">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 bg-background border-border/50 rounded-sm focus-visible:ring-primary/50 text-primary accent-primary"
+                required
+              />
+              <Label htmlFor="terms" className="text-xs text-muted-foreground leading-snug">
+                I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
+              </Label>
+            </div>
+
+            <div className="flex items-start space-x-2">
+              <input
+                type="checkbox"
+                id="privacy"
+                checked={privacyAccepted}
+                onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                className="mt-1 bg-background border-border/50 rounded-sm focus-visible:ring-primary/50 text-primary accent-primary"
+                required
+              />
+              <Label htmlFor="privacy" className="text-xs text-muted-foreground leading-snug">
+                I have read and agree to the <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+              </Label>
+            </div>
+
+            {error ? <p className="text-sm text-accent" role="alert">{error}</p> : null}
             <Button 
               type="submit" 
               className="w-full bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground font-serif tracking-widest transition-all rounded-sm uppercase mt-4" 

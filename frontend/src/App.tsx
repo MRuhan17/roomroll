@@ -14,14 +14,22 @@ import { SessionRecapsPage } from "@/pages/SessionRecapsPage";
 import CampaignSetupPage from "@/pages/CampaignSetupPage";
 import { TavernPage } from "@/pages/TavernPage";
 import { CampaignUrlManager } from "@/components/CampaignUrlManager";
+import { PrivacyPolicyPage } from "@/pages/PrivacyPolicyPage";
+import { TermsOfServicePage } from "@/pages/TermsOfServicePage";
+import { AccessibilityPage } from "@/pages/AccessibilityPage";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 export default function App() {
   return (
     <div className="min-h-screen">
+      <CookieConsentBanner />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
+        <Route path="/accessibility" element={<AccessibilityPage />} />
         <Route
           path="/onboarding"
           element={

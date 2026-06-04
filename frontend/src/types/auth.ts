@@ -18,4 +18,6 @@ export interface RegisterPayload {
   displayName: string;
   email: string;
   password: string;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
 }
